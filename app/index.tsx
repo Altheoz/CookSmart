@@ -1,19 +1,20 @@
 import { router } from 'expo-router'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
 import React, { useState } from 'react'
-import { 
-    SafeAreaView, 
-    Text, 
-    TextInput, 
-    TouchableOpacity, 
-    View, 
-    StyleSheet, 
+import {
     Alert,
     KeyboardAvoidingView,
     Platform,
-    ScrollView
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native'
 import { auth } from '../FirebaseConfig'
+import "./global.css"
 
 const Index = () => {
     const [email, setEmail] = useState('');
@@ -74,6 +75,7 @@ const Index = () => {
             >
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <View style={styles.header}>
+                        <Text className="text-xl font-bold text-blue-500">HI</Text>
                         <Text style={styles.title}>CookSmart</Text>
                         <Text style={styles.subtitle}>Your Personal Cooking Assistant</Text>
                     </View>
