@@ -26,12 +26,13 @@ const Index = () => {
             Alert.alert('Error', 'Please fill in all fields');
             return;
         }
-        
+
         setIsLoading(true);
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             if (userCredential.user) {
-                router.replace('/(tabs)');
+                router.replace('/(tabs)/home');
+
             }
         } catch (error: any) {
             console.log(error);
@@ -46,18 +47,19 @@ const Index = () => {
             Alert.alert('Error', 'Please fill in all fields');
             return;
         }
-        
+
         if (password.length < 6) {
             Alert.alert('Error', 'Password must be at least 6 characters long');
             return;
         }
-        
+
         setIsLoading(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             if (userCredential.user) {
                 Alert.alert('Success', 'Account created successfully!');
-                router.replace('/(tabs)');
+                router.replace('/(tabs)/home');
+
             }
         } catch (error: any) {
             console.log(error);
@@ -69,7 +71,7 @@ const Index = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <KeyboardAvoidingView 
+            <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardView}
             >
@@ -82,7 +84,7 @@ const Index = () => {
 
                     <View style={styles.formContainer}>
                         <Text style={styles.formTitle}>Welcome Back</Text>
-                        
+
                         <TextInput
                             style={styles.input}
                             placeholder="Email"
@@ -92,7 +94,7 @@ const Index = () => {
                             autoCapitalize="none"
                             autoCorrect={false}
                         />
-                        
+
                         <TextInput
                             style={styles.input}
                             placeholder="Password"
@@ -102,8 +104,8 @@ const Index = () => {
                             autoCapitalize="none"
                         />
 
-                        <TouchableOpacity 
-                            style={[styles.button, styles.signInButton]} 
+                        <TouchableOpacity
+                            style={[styles.button, styles.signInButton]}
                             onPress={signIn}
                             disabled={isLoading}
                         >
@@ -112,8 +114,8 @@ const Index = () => {
                             </Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity 
-                            style={[styles.button, styles.signUpButton]} 
+                        <TouchableOpacity
+                            style={[styles.button, styles.signUpButton]}
                             onPress={signUp}
                             disabled={isLoading}
                         >
