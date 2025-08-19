@@ -8,10 +8,10 @@ import { db } from '../../FirebaseConfig';
 export default function Example() {
 
     const [recipe, setRecipe] = useState('');
-  const [todos, setTodos] = useState<any>([]);
+  const [crud, setCrud] = useState<any>([]);
   const auth = getAuth();
   const user = auth.currentUser;
-  const todosCollection = collection(db, 'todos');
+  const crudCollection = collection(db, 'crud');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(getAuth(), (user) => {
@@ -24,39 +24,39 @@ export default function Example() {
   }, []);
 
     useEffect(() => {
-    fetchTodos();
+    fetchCrud();
   }, [user]);
 
-  const fetchTodos = async () => {
+  const fetchCrud = async () => {
     if (user) {
-      const q = query(todosCollection, where("userId", "==", user.uid));
+      const q = query(crudCollection, where("userId", "==", user.uid));
       const data = await getDocs(q);
-      setTodos(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+      setCrud(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
     } else {
       console.log("No user logged in");
     }
   };
 
-  const addTodo = async () => {
+  const addCrud = async () => {
     if (user) {
-      await addDoc(todosCollection, { recipe, completed: false, userId: user.uid });
+      await addDoc(crudCollection, { recipe, completed: false, userId: user.uid });
       setRecipe('');
-      fetchTodos();
+      fetchCrud();
     } else {
       console.log("No user logged in");
     }
   };
 
-  const updateTodo = async (id: string, completed: any) => {
-    const todoDoc = doc(db, 'todos', id);
-    await updateDoc(todoDoc, { completed: !completed });
-    fetchTodos();
+  const updateCrud = async (id: string, completed: any) => {
+    const crudDoc = doc(db, 'crud', id);
+    await updateDoc(crudDoc, { completed: !completed });
+    fetchCrud();
   };
 
-  const deleteTodo = async (id: string) => {
-    const todoDoc = doc(db, 'todos', id);
-    await deleteDoc(todoDoc);
-    fetchTodos();
+  const deleteCrud = async (id: string) => {
+    const crudDoc = doc(db, 'crud', id);
+    await deleteDoc(crudDoc);
+    fetchCrud();
   };
 
   return (
@@ -75,14 +75,14 @@ export default function Example() {
         />
         <TouchableOpacity
           className="bg-blue-500 rounded-md px-4 justify-center items-center"
-          onPress={addTodo}
+          onPress={addCrud}
         >
           <Text className="text-white font-semibold">Add</Text>
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={todos}
+        data={crud}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View className="flex-row items-center mb-3 bg-gray-100 rounded-md p-3">
@@ -96,7 +96,7 @@ export default function Example() {
 
             <TouchableOpacity
               className="bg-yellow-500 px-3 py-1 rounded-md mr-2"
-              onPress={() => updateTodo(item.id, item.completed)}
+              onPress={() => updateCrud(item.id, item.completed)}
             >
               <Text className="text-white text-sm">
                 {item.completed ? 'Undo' : 'Complete'}
@@ -105,7 +105,7 @@ export default function Example() {
 
             <TouchableOpacity
               className="bg-red-500 px-3 py-1 rounded-md"
-              onPress={() => deleteTodo(item.id)}
+              onPress={() => deleteCrud(item.id)}
             >
               <Text className="text-white text-sm">Delete</Text>
             </TouchableOpacity>
