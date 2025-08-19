@@ -34,6 +34,14 @@ export default function HomeScreen() {
           <Text className="text-lg text-gray-500">Loading...</Text>
         )}
       </View>
+      <View>
+         <TouchableOpacity
+        className="bg-blue-500 px-4 py-2 rounded"
+        onPress={() => router.push('../(tabs)/example')}
+      >
+        <Text className="text-white text-lg">Go to Details hi</Text>
+      </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
