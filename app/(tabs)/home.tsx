@@ -1,4 +1,6 @@
 import { FontAwesome, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { createDrawerNavigator } from '@react-navigation/drawer';
+import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
@@ -11,30 +13,22 @@ import {
   View
 } from 'react-native';
 
-export default function HomeScreen() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+const Drawer = createDrawerNavigator();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(getAuth(), (user) => {
-      if (user) {
-        setCurrentUser(user);
-      } else {
-        router.replace('/');
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
+function HomeContent() {
+  const navigation = useNavigation<any>();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
-        <Ionicons name="menu" size={28} color="black" />
+        <TouchableOpacity onPress={() => navigation.openDrawer()}>
+          <Ionicons name="menu" size={28} color="black" />
+        </TouchableOpacity>
         <Image
           source={require('@/assets/images/imgg.png')}
           className="w-12 h-12 rounded-full"
-        />      
-          <View style={{ width: 28 }} />
+        />
+        <View style={{ width: 28 }} />
       </View>
 
       <View style={styles.greetingContainer}>
@@ -81,6 +75,32 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+  );
+}
+
+export default function HomeScreen() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(getAuth(), (user) => {
+      if (user) {
+        setCurrentUser(user);
+      } else {
+        router.replace('/');
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (!currentUser) {
+    return null;
+  }
+
+  return (
+    <Drawer.Navigator screenOptions={{ headerShown: false }}>
+      <Drawer.Screen name="Home" component={HomeContent} />
+    </Drawer.Navigator>
   );
 }
 
