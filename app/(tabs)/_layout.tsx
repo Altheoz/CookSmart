@@ -1,30 +1,36 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
-
-import { HapticTab } from '@/components/HapticTab';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import React, { useEffect } from 'react';
+import { Platform, StatusBar, View } from 'react-native';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  useEffect(() => {
+    StatusBar.setBarStyle('dark-content');
+    if (Platform.OS === 'android') {
+      StatusBar.setBackgroundColor('#fff'); 
+    }
+  }, []);
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-         
-            position: 'absolute',
+    <View
+      style={{
+        flex: 1,
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 40,
+        paddingBottom: 40,
+        backgroundColor: '#fff', 
+      }}
+    >
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            display: 'none',
           },
-          default: {},
-        }),
-      }}>
-    </Tabs>
+        }}
+      >
+        <Tabs.Screen name="index" />
+        <Tabs.Screen name="search" />
+        <Tabs.Screen name="profile" />
+      </Tabs>
+    </View>
   );
 }
