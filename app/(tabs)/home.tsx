@@ -28,10 +28,8 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Bar with Drawer Icon and Logo */}
       <View style={styles.topBar}>
         <Ionicons name="menu" size={28} color="black" />
-        {/* Uncomment and use your logo here if needed */}
         <Image
           source={require('@/assets/images/imgg.png')}
           className="w-12 h-12 rounded-full"
@@ -39,7 +37,6 @@ export default function HomeScreen() {
           <View style={{ width: 28 }} />
       </View>
 
-      {/* Greeting Section */}
       <View style={styles.greetingContainer}>
         <Text style={styles.greetingTitle}>Good Day!</Text>
         <Text style={styles.greetingSubtitle}>Ready to Start Cooking?</Text>
@@ -49,9 +46,7 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      {/* Button Cards */}
       <View style={styles.cardContainer}>
-        {/* Discover Recipes */}
         <TouchableOpacity
           style={styles.card}
           onPress={() => router.push('/')}
@@ -63,7 +58,6 @@ export default function HomeScreen() {
           <MaterialIcons name="search" size={24} color="orange" />
         </TouchableOpacity>
 
-        {/* Recipes Saved */}
         <TouchableOpacity
           style={styles.card}
           onPress={() => router.push('/example')}
@@ -75,7 +69,6 @@ export default function HomeScreen() {
           <Ionicons name="bookmark" size={24} color="dodgerblue" />
         </TouchableOpacity>
 
-        {/* Favorites */}
         <TouchableOpacity
           style={styles.card}
           onPress={() => router.push('/')}
@@ -94,7 +87,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#DFFFE0', // Soft green background
+    backgroundColor: '#DFFFE0', 
   },
   topBar: {
     flexDirection: 'row',
