@@ -1,26 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import React, { useState } from 'react';
+import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { auth } from '../FirebaseConfig';
-import "./global.css";
-
-
+import './global.css';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordHidden, setIsPasswordHidden] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.replace('/(tabs)/home');
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -44,18 +52,17 @@ const Login = () => {
 
   return (
     <SafeAreaView style={[styles.container, { flex: 1 }]}>
-
-    <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={28} color="#333" />
-            </TouchableOpacity>
-          </View>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={28} color="#333" />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.contentWrapper}>
         <Text style={styles.heading}>Welcome back! Glad to see you, Again!</Text>
 
-        <TextInput 
-            style={[styles.emailInput, styles.input]}
+        <TextInput
+          style={[styles.emailInput, styles.input]}
           placeholder="Enter your email"
           value={email}
           onChangeText={setEmail}
@@ -172,9 +179,8 @@ const styles = StyleSheet.create({
   bottomTextWrapper: {
     flexDirection: 'row',
     justifyContent: 'center',
-
   },
-   header: {
+  header: {
     paddingHorizontal: 20,
   },
   backButton: {

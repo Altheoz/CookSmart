@@ -1,21 +1,35 @@
 import { router } from 'expo-router';
-import React from 'react';
+
+import { onAuthStateChanged } from 'firebase/auth';
+import React, { useEffect } from 'react';
 import {
-    Image,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { auth } from '../FirebaseConfig';
 
 const Index = () => {
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.replace('/(tabs)/home');
+      }
+    });
+
+    return unsubscribe; 
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.logoWrapper}>
         <View style={styles.logoBox}>
           <Image
-            source={require('../assets/images/imgg.png')} 
+            source={require('../assets/images/imgg.png')}
             style={styles.logoImage}
             resizeMode="contain"
           />
@@ -34,6 +48,8 @@ const Index = () => {
     </SafeAreaView>
   );
 };
+
+
 
 const styles = StyleSheet.create({
   container: {

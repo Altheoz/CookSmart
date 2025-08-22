@@ -1,16 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import React, { useState } from 'react';
+import { createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { auth } from '../FirebaseConfig';
 
@@ -21,6 +21,16 @@ const Signup = () => {
   const [isPasswordHidden, setIsPasswordHidden] = useState(true);
   const [isConfirmPasswordHidden, setIsConfirmPasswordHidden] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.replace('/(tabs)/home');
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   const handleSignup = async () => {
     if (!email || !password || !confirmPassword) {
@@ -42,9 +52,9 @@ const Signup = () => {
       if (userCredential.user) {
         router.replace('/(tabs)/home');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
-      Alert.alert('Signup Failed');
+      Alert.alert('Signup Failed', error.message);
     } finally {
       setIsLoading(false);
     }
@@ -53,7 +63,7 @@ const Signup = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
       </View>
@@ -162,7 +172,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: 'center',
-     marginTop: '-40%', 
+    marginTop: '-40%',
   },
   title: {
     fontSize: 35,
