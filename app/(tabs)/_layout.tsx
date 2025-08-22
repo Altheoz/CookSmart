@@ -27,9 +27,12 @@ export default function TabLayout() {
           },
         }}
       >
-        <Tabs.Screen name="index" />
-        <Tabs.Screen name="search" />
+        <Tabs.Screen name="saved" />
+        <Tabs.Screen name="home" />
         <Tabs.Screen name="profile" />
+        <Tabs.Screen name="favorite" />
+        <Tabs.Screen name="featured" />
+        <Tabs.Screen name="discover" />
       </Tabs>
     </View>
   );

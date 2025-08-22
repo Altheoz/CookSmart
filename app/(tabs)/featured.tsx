@@ -1,4 +1,4 @@
-import { FontAwesome, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
@@ -14,15 +14,16 @@ import {
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
+// Import other screens here
 import DiscoverContent from './discover';
 import FavoriteContent from './favorite';
-import FeaturedContent from './featured';
+import HomeContent from './home';
 import ProfileContent from './profile';
 import SavedContent from './saved';
 
 const Drawer = createDrawerNavigator();
 
-function HomeContent() {
+function FeaturedContent() {
   const navigation = useNavigation<any>();
 
   return (
@@ -37,66 +38,13 @@ function HomeContent() {
         />
         <View style={{ width: 28 }} />
       </View>
-
-      <View style={styles.greetingContainer}>
-        <Text style={styles.greetingTitle}>Good Day!</Text>
-        <Text style={styles.greetingSubtitle}>Ready to Start Cooking?</Text>
-        <Text style={styles.greetingDescription}>
-          Discover amazing recipes, get cooking guidance, and master new culinary
-          skills with your personal AI assistance.
-        </Text>
-      </View>
-
-      <View style={styles.cardContainer}>
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("DrawerDiscover")}
-        >
-          <View>
-            <Text style={styles.cardTitle}>Discover Recipes</Text>
-            <Text style={styles.cardSubtitle}>Discover New Recipes With AI</Text>
-          </View>
-          <MaterialIcons name="search" size={24} color="orange" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("DrawerSaved")}
-        >
-          <View>
-            <Text style={styles.cardTitle}>Recipes Saved</Text>
-            <Text style={styles.cardNumber}>3</Text>
-          </View>
-          <Ionicons name="bookmark" size={24} color="dodgerblue" />
-
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("DrawerFavorite")}
-        >
-          <View>
-            <Text style={styles.cardTitle}>Favorites</Text>
-            <Text style={styles.cardNumber}>4</Text>
-          </View>
-          <FontAwesome name="heart" size={24} color="crimson" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => router.push('/example')}
-        >
-          <View>
-            <Text style={styles.cardTitle}>Storage</Text>
-          </View>
-          <FontAwesome name="cloud" size={24} color="green" />
-        </TouchableOpacity>
-      </View>
+<Text>feature</Text>
+   
     </SafeAreaView>
   );
 }
 
-export default function HomeScreen() {
+export default function FeatureScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -116,25 +64,25 @@ export default function HomeScreen() {
   }
 
   return (
-    <Drawer.Navigator
-      initialRouteName="DrawerHome"
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Drawer.Screen name="DrawerHome" component={HomeContent} />
-      <Drawer.Screen name="DrawerFeatured" component={FeaturedContent} />
-      <Drawer.Screen name="DrawerDiscover" component={DiscoverContent} />
-      <Drawer.Screen name="DrawerFavorite" component={FavoriteContent} />
-      <Drawer.Screen name="DrawerSaved" component={SavedContent} />
-      <Drawer.Screen name="DrawerProfile" component={ProfileContent} />
-    </Drawer.Navigator>
+   <Drawer.Navigator
+    drawerContent={(props) => <CustomDrawerContent {...props} />}
+    screenOptions={{ headerShown: false }}
+  >
+        <Drawer.Screen name="DrawerFeatured" component={FeaturedContent} />
+
+    <Drawer.Screen name="DrawerHome" component={HomeContent} />
+    <Drawer.Screen name="DrawerDiscover" component={DiscoverContent} />
+    <Drawer.Screen name="DrawerFavorite" component={FavoriteContent} />
+    <Drawer.Screen name="DrawerSaved" component={SavedContent} />
+    <Drawer.Screen name="DrawerProfile" component={ProfileContent} />
+  </Drawer.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#DFFFE0',
+    backgroundColor: '#DFFFE0', 
   },
   topBar: {
     flexDirection: 'row',
