@@ -44,6 +44,13 @@ const Login = () => {
 
   return (
     <SafeAreaView style={[styles.container, { flex: 1 }]}>
+
+    <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={28} color="#333" />
+            </TouchableOpacity>
+          </View>
+
       <View style={styles.contentWrapper}>
         <Text style={styles.heading}>Welcome back! Glad to see you, Again!</Text>
 
@@ -111,6 +118,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+    marginTop: '-40%',
   },
   heading: {
     fontSize: 30,
@@ -165,6 +173,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
 
+  },
+   header: {
+    paddingHorizontal: 20,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: '20%',
   },
   bottomText: {
     fontSize: 14,
