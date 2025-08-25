@@ -124,7 +124,7 @@ export default function Example() {
               Signed in as: {currentUser.email}
             </Text>
             <TouchableOpacity onPress={() => auth.signOut()}>
-              <Text className="text-lg text-red-500">Sign Out</Text>
+              <Text className="text-lg text-red-500">Sign Outs</Text>
             </TouchableOpacity>
           </>
         ) : (

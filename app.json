@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/imgg.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.altheoz06.CookSmart"
     },
     "web": {
       "bundler": "metro",
@@ -37,6 +38,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1e93168b-743a-45e9-a52f-f8777000a958"
+      }
     }
   }
 }
