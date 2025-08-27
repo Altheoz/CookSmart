@@ -1,12 +1,27 @@
 import { Feather, FontAwesome, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 
 import { getAuth } from 'firebase/auth';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function CustomDrawerContent(props: any) {
   const user = getAuth().currentUser;
+  const [avatar, setAvatar] = useState(require('@/assets/images/avatars/avatar1.png'));
+
+  useEffect(() => {
+  const loadAvatar = async () => {
+    const uri = await AsyncStorage.getItem('userAvatar');
+    if (uri) setAvatar({ uri });
+  };
+
+  loadAvatar();
+
+  const unsubscribe = props.navigation.addListener('focus', loadAvatar);
+  return unsubscribe;
+}, [props.navigation]);
+
 
   const menuItems = [
     { label: 'Home', icon: <Ionicons name="home" size={20} />, route: 'DrawerHome' },
@@ -56,13 +71,13 @@ export default function CustomDrawerContent(props: any) {
           className="flex-row items-center"
           onPress={() => props.navigation.navigate('DrawerProfile')}
         >
-          <Ionicons className='bg-green-500 p-1 rounded-full' name="person-circle-outline" size={34} color="#fff" />
-          <View className="ml-3">
+          <Image source={avatar} style={{ width: 34, height: 34, borderRadius: 17 }} />
+        <View className="ml-3">
             <Text className="text-black font-semibold text-sm">
               {user?.email}
             </Text>
-            <Text className="text-green-500 text-xs">Ready to Cook</Text>
-          </View>
+          <Text className="text-green-500 text-xs">Ready to Cook</Text>
+        </View>
         </TouchableOpacity>
       </View>
     </DrawerContentScrollView>
@@ -75,6 +90,7 @@ const styles = StyleSheet.create({
     height: 40,
     marginRight: 10,
     resizeMode: 'contain',
+    borderRadius: 20,
   },
   head: {
     fontSize: 25,
