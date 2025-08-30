@@ -8,7 +8,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function CustomDrawerContent(props: any) {
   const user = getAuth().currentUser;
-  const [avatar, setAvatar] = useState(require('@/assets/images/avatars/avatar_1.png'));
+  const [avatar, setAvatar] = useState(require('@/assets/images/avatars/avatar_1.jpg'));
 
   useEffect(() => {
   const loadAvatar = async () => {

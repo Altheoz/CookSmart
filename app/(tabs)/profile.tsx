@@ -35,7 +35,7 @@ export default function ProfileContent() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const [avatar, setAvatar] = useState(require('@/assets/images/avatars/avatar_1.png'));
+  const [avatar, setAvatar] = useState(require('@/assets/images/avatars/avatar_1.jpg'));
   const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
