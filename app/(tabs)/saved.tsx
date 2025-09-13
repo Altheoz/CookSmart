@@ -5,16 +5,20 @@ import { router } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
+    FlatList,
     Image,
     SafeAreaView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
-// Import other screens here
+import { MealCard } from '@/components/MealCard';
+import { useRecipeContext } from '@/contexts/RecipeContext';
+import { Meal } from '@/services/mealApi';
 import DiscoverContent from './discover';
 import FavoriteContent from './favorite';
 import FeaturedContent from './featured';
@@ -25,6 +29,32 @@ const Drawer = createDrawerNavigator();
 
 function SavedContent() {
     const navigation = useNavigation<any>();
+    const { savedRecipes, removeFromSaved } = useRecipeContext();
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredSavedRecipes = savedRecipes.filter(meal =>
+        meal.strMeal.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const handleMealPress = (meal: Meal) => {
+        navigation.navigate('MealDetail', { meal });
+    };
+
+    const handleRemoveSaved = async (mealId: string) => {
+        await removeFromSaved(mealId);
+    };
+
+    const renderMealCard = ({ item }: { item: Meal }) => (
+        <MealCard
+            meal={item}
+            onPress={handleMealPress}
+            onRemove={handleRemoveSaved}
+            showRemoveButton={true}
+            showFavoriteButton={false}
+            showSavedButton={false}
+            style={{ width: '45%' }}
+        />
+    );
 
     return (
         <SafeAreaView style={styles.container}>
@@ -38,9 +68,37 @@ function SavedContent() {
                 />
                 <View style={{ width: 28 }} />
             </View>
-            <Text>Saved</Text>
 
+            <Text style={styles.title}>Recipe Saved</Text>
 
+            <View style={styles.searchContainer}>
+                <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                />
+            </View>
+
+            {filteredSavedRecipes.length > 0 ? (
+                <FlatList
+                    data={filteredSavedRecipes}
+                    keyExtractor={(item) => item.idMeal}
+                    numColumns={2}
+                    renderItem={renderMealCard}
+                    contentContainerStyle={styles.mealsList}
+                    showsVerticalScrollIndicator={false}
+                />
+            ) : (
+                <View style={styles.emptyState}>
+                    <Ionicons name="bookmark-outline" size={64} color="#ccc" />
+                    <Text style={styles.emptyText}>No saved recipes yet</Text>
+                    <Text style={styles.emptySubtext}>
+                        Save recipes to see them here
+                    </Text>
+                </View>
+            )}
         </SafeAreaView>
     );
 }
@@ -82,69 +140,60 @@ export default function SavedScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#DFFFE0',
+        backgroundColor: '#FFE5D4',
     },
     topBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
         paddingHorizontal: 16,
         paddingTop: 16,
     },
-    greetingContainer: {
-        marginTop: 24,
-        paddingHorizontal: 24,
-    },
-    greetingTitle: {
-        fontSize: 24,
+    title: {
+        fontSize: 28,
         fontWeight: 'bold',
+        color: '#8B7355',
         textAlign: 'center',
-        color: '#000',
+        marginTop: 20,
+        marginBottom: 20,
     },
-    greetingSubtitle: {
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        marginHorizontal: 16,
+        marginBottom: 20,
+    },
+    searchIcon: {
+        marginRight: 8,
+    },
+    searchInput: {
+        flex: 1,
+        paddingVertical: 12,
+        fontSize: 16,
+    },
+    mealsList: {
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+    },
+    emptyState: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 32,
+    },
+    emptyText: {
         fontSize: 20,
         fontWeight: 'bold',
-        textAlign: 'center',
-        marginTop: 8,
-        color: '#000',
-    },
-    greetingDescription: {
-        fontSize: 14,
-        textAlign: 'center',
-        marginTop: 16,
-        color: '#555',
-    },
-    cardContainer: {
-        marginTop: 32,
-        paddingHorizontal: 24,
-        gap: 16,
-    },
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 16,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 3,
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#000',
-    },
-    cardSubtitle: {
-        fontSize: 12,
         color: '#666',
-        marginTop: 4,
+        marginTop: 16,
+        marginBottom: 8,
     },
-    cardNumber: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#000',
-        marginTop: 4,
+    emptySubtext: {
+        fontSize: 14,
+        color: '#999',
+        textAlign: 'center',
     },
 });

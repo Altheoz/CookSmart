@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
+import { useRecipeContext } from '@/contexts/RecipeContext';
 import DiscoverContent from './discover';
 import FavoriteContent from './favorite';
 import FeaturedContent from './featured';
@@ -24,6 +25,7 @@ const Drawer = createDrawerNavigator();
 
 function HomeContent() {
   const navigation = useNavigation<any>();
+  const { getFavoritesCount, getSavedCount } = useRecipeContext();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -59,13 +61,24 @@ function HomeContent() {
           <MaterialIcons name="search" size={24} color="orange" />
         </TouchableOpacity>
 
+         <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate("DrawerFeatured")}
+        >
+          <View>
+            <Text style={styles.cardTitle}>Featured Recipes</Text>
+            <Text style={styles.cardSubtitle}>Trending & Popular</Text>
+          </View>
+          <Ionicons name="restaurant" size={24} color="purple" />
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.card}
           onPress={() => navigation.navigate("DrawerSaved")}
         >
           <View>
             <Text style={styles.cardTitle}>Recipes Saved</Text>
-            <Text style={styles.cardNumber}>3</Text>
+            <Text style={styles.cardNumber}>{getSavedCount()}</Text>
           </View>
           <Ionicons name="bookmark" size={24} color="dodgerblue" />
 
@@ -77,20 +90,14 @@ function HomeContent() {
         >
           <View>
             <Text style={styles.cardTitle}>Favorites</Text>
-            <Text style={styles.cardNumber}>4</Text>
+            <Text style={styles.cardNumber}>{getFavoritesCount()}</Text>
           </View>
           <FontAwesome name="heart" size={24} color="crimson" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => router.push('/example')}
-        >
-          <View>
-            <Text style={styles.cardTitle}>Storage</Text>
-          </View>
-          <FontAwesome name="cloud" size={24} color="green" />
-        </TouchableOpacity>
+       
+
+        
       </View>
     </SafeAreaView>
   );

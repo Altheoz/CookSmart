@@ -32,6 +32,7 @@ export default function TabLayout() {
         <Tabs.Screen name="profile" />
         <Tabs.Screen name="favorite" />
         <Tabs.Screen name="featured" />
+        <Tabs.Screen name="categories" />
         <Tabs.Screen name="discover" />
       </Tabs>
     </View>
