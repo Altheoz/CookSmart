@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Image,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -29,76 +30,94 @@ function HomeContent() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.openDrawer()}>
-          <Ionicons name="menu" size={28} color="black" />
-        </TouchableOpacity>
-        <Image
-          source={require('@/assets/images/imgg.png')}
-          className="w-12 h-12 rounded-full"
-        />
-        <View style={{ width: 28 }} />
-      </View>
-
-      <View style={styles.greetingContainer}>
-        <Text style={styles.greetingTitle}>Good Day!</Text>
-        <Text style={styles.greetingSubtitle}>Ready to Start Cooking?</Text>
-        <Text style={styles.greetingDescription}>
-          Discover amazing recipes, get cooking guidance, and master new culinary
-          skills with your personal AI assistance.
-        </Text>
-      </View>
-
-      <View style={styles.cardContainer}>
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("DrawerDiscover")}
-        >
-          <View>
-            <Text style={styles.cardTitle}>Discover Recipes</Text>
-            <Text style={styles.cardSubtitle}>Discover New Recipes With AI</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => navigation.openDrawer()}>
+            <Ionicons name="menu" size={28} color="black" />
+          </TouchableOpacity>
+          <View style={styles.imageWrapper}>
+            <Image
+              source={require('@/assets/images/imgg.png')}
+              style={styles.profileImage}
+              resizeMode="cover"
+            />
           </View>
-          <MaterialIcons name="search" size={24} color="orange" />
-        </TouchableOpacity>
+          <View style={{ width: 28 }} />
+        </View>
 
-         <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("DrawerFeatured")}
-        >
-          <View>
-            <Text style={styles.cardTitle}>Featured Recipes</Text>
-            <Text style={styles.cardSubtitle}>Trending & Popular</Text>
-          </View>
-          <Ionicons name="restaurant" size={24} color="purple" />
-        </TouchableOpacity>
+   
+        <View style={styles.greetingContainer}>
+          <Text style={styles.greetingTitle}>Good Day!</Text>
+          <Text style={styles.greetingSubtitle}>Ready to Start Cooking?</Text>
+          <Text style={styles.greetingDescription}>
+            Discover amazing recipes, get cooking guidance, and master new culinary
+            skills with your personal AI assistance.
+          </Text>
+        </View>
 
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("DrawerSaved")}
-        >
-          <View>
-            <Text style={styles.cardTitle}>Recipes Saved</Text>
-            <Text style={styles.cardNumber}>{getSavedCount()}</Text>
-          </View>
-          <Ionicons name="bookmark" size={24} color="dodgerblue" />
+  
+        <View style={styles.cardContainer}>
+          <TouchableOpacity
+            style={[styles.card, styles.cardAccentDiscover]}
+            onPress={() => navigation.navigate("DrawerDiscover")}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardText}>
+              <Text style={styles.cardTitle}>Discover Recipes</Text>
+              <Text style={styles.cardSubtitle}>Discover New Recipes With AI</Text>
+            </View>
+            <View style={[styles.iconBox, { backgroundColor: 'rgba(255,165,0,0.2)' }]}>
+              <MaterialIcons name="search" size={24} color="orange" />
+            </View>
+          </TouchableOpacity>
 
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.card, styles.cardAccentFeatured]}
+            onPress={() => navigation.navigate("DrawerFeatured")}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardText}>
+              <Text style={styles.cardTitle}>Featured Recipes</Text>
+              <Text style={styles.cardSubtitle}>Trending & Popular</Text>
+            </View>
+            <View style={[styles.iconBox, { backgroundColor: 'rgba(128,0,128,0.2)' }]}>
+              <Ionicons name="restaurant" size={24} color="purple" />
+            </View>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("DrawerFavorite")}
-        >
-          <View>
-            <Text style={styles.cardTitle}>Favorites</Text>
-            <Text style={styles.cardNumber}>{getFavoritesCount()}</Text>
-          </View>
-          <FontAwesome name="heart" size={24} color="crimson" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.card, styles.cardAccentSaved]}
+            onPress={() => navigation.navigate("DrawerSaved")}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardText}>
+              <Text style={styles.cardTitle}>Recipes Saved</Text>
+              <Text style={styles.cardNumber}>{getSavedCount()}</Text>
+            </View>
+            <View style={[styles.iconBox, { backgroundColor: 'rgba(30,144,255,0.2)' }]}>
+              <Ionicons name="bookmark" size={24} color="dodgerblue" />
+            </View>
+          </TouchableOpacity>
 
-       
+          <TouchableOpacity
+            style={[styles.card, styles.cardAccentFavorite]}
+            onPress={() => navigation.navigate("DrawerFavorite")}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardText}>
+              <Text style={styles.cardTitle}>Favorites</Text>
+              <Text style={styles.cardNumber}>{getFavoritesCount()}</Text>
+            </View>
+            <View style={[styles.iconBox, { backgroundColor: 'rgba(220,20,60,0.2)' }]}>
+              <FontAwesome name="heart" size={24} color="crimson" />
+            </View>
+          </TouchableOpacity>
 
-        
-      </View>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -143,56 +162,102 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#DFFFE0',
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 16,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+  },
+  imageWrapper: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 7,
+    width: 60,
+    height: 60,
+    position: 'relative',
+    top: 8, 
+  
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
   },
   greetingContainer: {
-    marginTop: 24,
+    marginTop: 32,
     paddingHorizontal: 24,
   },
   greetingTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 30,
     textAlign: 'center',
     color: '#000',
+    fontFamily: 'Sansita',
   },
   greetingSubtitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 6,
     color: '#000',
+    fontFamily: 'Sansita',
   },
   greetingDescription: {
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: 'center',
-    marginTop: 16,
+    marginTop: 14,
     color: '#555',
   },
   cardContainer: {
-    marginTop: 32,
+    marginTop: 36,
     paddingHorizontal: 24,
-    gap: 16,
+    gap: 18, 
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
     elevation: 3,
+    borderLeftWidth: 4,  
+  },
+  cardAccentDiscover: {
+    borderLeftColor: 'orange',
+  },
+  cardAccentFeatured: {
+    borderLeftColor: 'purple',
+  },
+  cardAccentSaved: {
+    borderLeftColor: 'dodgerblue',
+  },
+  cardAccentFavorite: {
+    borderLeftColor: 'crimson',
+  },
+  cardText: {
+    flex: 1,
+    marginRight: 12,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#000',
   },
   cardSubtitle: {
@@ -201,9 +266,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   cardNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#000',
     marginTop: 4,
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
