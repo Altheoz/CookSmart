@@ -36,17 +36,9 @@ export default function CategoryMealsScreen() {
     }
   };
 
-const handleMealPress = async (meal: Meal) => {
-  try {
-    const fullMeal = await mealApiService.getMealById(meal.idMeal);
-    if (fullMeal) {
-      navigation.navigate('MealDetail', { meal: fullMeal });
-    } else {
-      console.warn('Meal not found');
-    }
-  } catch (error) {
-    console.error('Error fetching meal details:', error);
-  }
+const handleMealPress = (meal: Meal) => {
+
+  navigation.navigate('MealDetail', { meal });
 };
 
 

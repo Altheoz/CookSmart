@@ -129,9 +129,25 @@ class MealApiService {
 
   async getMealsByCategory(category: string): Promise<Meal[]> {
     try {
+      
       const response = await fetch(`${this.baseUrl}/filter.php?c=${encodeURIComponent(category)}`);
       const data: MealResponse = await response.json();
-      return data.meals || [];
+      const basicMeals = data.meals || [];
+      
+      
+      const fullMeals = await Promise.all(
+        basicMeals.slice(0, 10).map(async (meal) => { 
+          try {
+            const fullMeal = await this.getMealById(meal.idMeal);
+            return fullMeal || meal; 
+          } catch (error) {
+            console.warn(`Failed to fetch full details for meal ${meal.idMeal}:`, error);
+            return meal; 
+          }
+        })
+      );
+      
+      return fullMeals.filter(meal => meal !== null) as Meal[];
     } catch (error) {
       console.error('Error getting meals by category:', error);
       return [];
@@ -140,9 +156,25 @@ class MealApiService {
 
   async getMealsByArea(area: string): Promise<Meal[]> {
     try {
+    
       const response = await fetch(`${this.baseUrl}/filter.php?a=${encodeURIComponent(area)}`);
       const data: MealResponse = await response.json();
-      return data.meals || [];
+      const basicMeals = data.meals || [];
+      
+      
+      const fullMeals = await Promise.all(
+        basicMeals.slice(0, 10).map(async (meal) => {
+          try {
+            const fullMeal = await this.getMealById(meal.idMeal);
+            return fullMeal || meal; 
+          } catch (error) {
+            console.warn(`Failed to fetch full details for meal ${meal.idMeal}:`, error);
+            return meal; 
+          }
+        })
+      );
+      
+      return fullMeals.filter(meal => meal !== null) as Meal[];
     } catch (error) {
       console.error('Error getting meals by area:', error);
       return [];
@@ -168,14 +200,54 @@ class MealApiService {
   }
 
   getEstimatedCookingTime(meal: Meal): number {
+  
+    if (!meal || !meal.idMeal) {
+      return 30; 
+    }
+
     const ingredientCount = this.extractIngredients(meal).length;
     const instructionLength = meal.strInstructions?.length || 0;
     
+   
     let baseTime = 15; 
+
     baseTime += Math.min(ingredientCount * 2, 30);
+    
+    
     baseTime += Math.min(Math.floor(instructionLength / 100), 20); 
     
-    return Math.min(baseTime, 120); 
+   
+    return Math.max(15, Math.min(baseTime, 120)); 
+  }
+
+  getDifficultyLevel(meal: Meal): 'Easy' | 'Medium' | 'Hard' {
+    const cookingTime = this.getEstimatedCookingTime(meal);
+    const ingredientCount = this.extractIngredients(meal).length;
+    const instructionLength = meal.strInstructions?.length || 0;
+    
+    
+    let difficultyScore = 0;
+    
+  
+    if (cookingTime <= 30) difficultyScore += 0;
+    else if (cookingTime <= 60) difficultyScore += 1;
+    else if (cookingTime <= 90) difficultyScore += 2;
+    else difficultyScore += 3;
+    
+   
+    if (ingredientCount <= 5) difficultyScore += 0;
+    else if (ingredientCount <= 10) difficultyScore += 1;
+    else difficultyScore += 2;
+    
+    
+    if (instructionLength <= 200) difficultyScore += 0;
+    else if (instructionLength <= 500) difficultyScore += 1;
+    else difficultyScore += 2;
+    
+  
+    if (difficultyScore <= 2) return 'Easy';
+    else if (difficultyScore <= 4) return 'Medium';
+    else return 'Hard';
   }
 }
 

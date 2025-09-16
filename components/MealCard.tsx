@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { useRecipeContext } from '../contexts/RecipeContext';
-import { Meal } from '../services/mealApi';
+import { Meal, mealApiService } from '../services/mealApi';
 
 interface MealCardProps {
   meal: Meal;
@@ -24,6 +24,10 @@ export const MealCard: React.FC<MealCardProps> = ({
   style,
 }) => {
   const { isFavorite, isSaved, addToFavorites, removeFromFavorites, addToSaved, removeFromSaved } = useRecipeContext();
+  
+  // Calculate cooking time and difficulty once to ensure consistency
+  const cookingTime = React.useMemo(() => mealApiService.getEstimatedCookingTime(meal), [meal.idMeal, meal.strInstructions]);
+  const difficulty = React.useMemo(() => mealApiService.getDifficultyLevel(meal), [meal.idMeal, meal.strInstructions]);
 
   const handleFavoritePress = async () => {
     if (isFavorite(meal.idMeal)) {
@@ -91,8 +95,41 @@ export const MealCard: React.FC<MealCardProps> = ({
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
           <Ionicons name="time-outline" size={16} color="#666" />
           <Text style={{ fontSize: 12, color: '#666', marginLeft: 4 }}>
-            {Math.floor(Math.random() * 30) + 15} min
+            {cookingTime} min
           </Text>
+        </View>
+
+        {/* Difficulty Level */}
+        <View style={{ marginBottom: 8 }}>
+          {(() => {
+            const difficultyColors = {
+              Easy: { bg: '#E8F5E8', text: '#2E7D32', border: '#4CAF50' },
+              Medium: { bg: '#FFF3E0', text: '#F57C00', border: '#FF9800' },
+              Hard: { bg: '#FFEBEE', text: '#C62828', border: '#F44336' }
+            };
+            const colors = difficultyColors[difficulty];
+            
+            return (
+              <View style={{
+                alignSelf: 'flex-start',
+                backgroundColor: colors.bg,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: 12,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+              }}>
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: '600',
+                  color: colors.text,
+                  textTransform: 'uppercase',
+                }}>
+                  {difficulty}
+                </Text>
+              </View>
+            );
+          })()}
         </View>
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

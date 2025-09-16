@@ -48,7 +48,7 @@ function HomeContent() {
           <View style={{ width: 28 }} />
         </View>
 
-   
+
         <View style={styles.greetingContainer}>
           <Text style={styles.greetingTitle}>Good Day!</Text>
           <Text style={styles.greetingSubtitle}>Ready to Start Cooking?</Text>
@@ -58,7 +58,7 @@ function HomeContent() {
           </Text>
         </View>
 
-  
+
         <View style={styles.cardContainer}>
           <TouchableOpacity
             style={[styles.card, styles.cardAccentDiscover]}
@@ -81,7 +81,7 @@ function HomeContent() {
           >
             <View style={styles.cardText}>
               <Text style={styles.cardTitle}>Featured Recipes</Text>
-              <Text style={styles.cardSubtitle}>Trending & Popular</Text>
+              <Text style={styles.cardSubtitle}>Get a Random Recipe Surprise!</Text>
             </View>
             <View style={[styles.iconBox, { backgroundColor: 'rgba(128,0,128,0.2)' }]}>
               <Ionicons name="restaurant" size={24} color="purple" />
@@ -172,8 +172,8 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-
+    borderBottomEndRadius: 12,
+    borderBottomStartRadius:12,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -191,8 +191,8 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     position: 'relative',
-    top: 8, 
-  
+    top: 15,
+
   },
   profileImage: {
     width: '100%',
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     marginTop: 36,
     paddingHorizontal: 24,
-    gap: 18, 
+    gap: 18,
   },
   card: {
     backgroundColor: '#fff',
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     elevation: 3,
-    borderLeftWidth: 4,  
+    borderLeftWidth: 4,
   },
   cardAccentDiscover: {
     borderLeftColor: 'orange',

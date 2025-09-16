@@ -2,15 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import { useRecipeContext } from '@/contexts/RecipeContext';
@@ -23,8 +23,9 @@ export default function MealDetailScreen() {
   const { addToFavorites, addToSaved, isFavorite, isSaved } = useRecipeContext();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const ingredients = mealApiService.extractIngredients(meal);
-  const cookingTime = mealApiService.getEstimatedCookingTime(meal);
+  const ingredients = React.useMemo(() => mealApiService.extractIngredients(meal), [meal.idMeal]);
+  const cookingTime = React.useMemo(() => mealApiService.getEstimatedCookingTime(meal), [meal.idMeal, meal.strInstructions]);
+  const difficulty = React.useMemo(() => mealApiService.getDifficultyLevel(meal), [meal.idMeal, meal.strInstructions]);
 
   const handleAddToFavorites = async () => {
     if (isFavorite(meal.idMeal)) {
@@ -77,6 +78,23 @@ export default function MealDetailScreen() {
             <View style={styles.infoItem}>
               <Ionicons name="people-outline" size={16} color="#666" />
               <Text style={styles.infoText}>4 servings</Text>
+            </View>
+            <View style={styles.infoItem}>
+              {(() => {
+                const difficultyColors = {
+                  Easy: '#4CAF50',
+                  Medium: '#FF9800',
+                  Hard: '#F44336'
+                };
+                const color = difficultyColors[difficulty];
+                
+                return (
+                  <>
+                    <Ionicons name="trending-up-outline" size={16} color={color} />
+                    <Text style={[styles.infoText, { color }]}>{difficulty}</Text>
+                  </>
+                );
+              })()}
             </View>
           </View>
         </View>
