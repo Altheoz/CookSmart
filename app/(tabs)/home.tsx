@@ -5,13 +5,13 @@ import { router } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
@@ -30,6 +30,10 @@ function HomeContent() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Decorative background circles */}
+      <View style={styles.bgBlobTop} />
+      <View style={styles.bgBlobMid} />
+      <View style={styles.bgBlobBottom} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -160,10 +164,40 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#DFFFE0',
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+  bgBlobTop: {
+    position: 'absolute',
+    top: -90,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: '#FFF4EB',
+    opacity: 0.8,
+  },
+  bgBlobMid: {
+    position: 'absolute',
+    top: 180,
+    left: -80,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: '#FEE0C8',
+    opacity: 0.7,
+  },
+  bgBlobBottom: {
+    position: 'absolute',
+    bottom: -100,
+    right: -60,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: '#FFEBDD',
+    opacity: 0.9,
   },
   topBar: {
     flexDirection: 'row',
