@@ -5,13 +5,13 @@ import { router } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
@@ -30,7 +30,6 @@ function HomeContent() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Decorative background circles */}
       <View style={styles.bgBlobTop} />
       <View style={styles.bgBlobMid} />
       <View style={styles.bgBlobBottom} />

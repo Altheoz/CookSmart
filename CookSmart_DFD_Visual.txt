@@ -1,0 +1,190 @@
+COOKSMART DATA FLOW DIAGRAM
+===============================================
+
+                    USER (Regular Users)                    ADMIN
+                         │                                    │
+                         │                                    │
+    ┌─────────────────────▼─────────────────────┐    ┌───────▼───────┐
+    │                                           │    │               │
+    │  1 Access Application (Sign up/Login)     │    │ 1 User Mgmt   │
+    │                                           │    │ (Create/Mgmt) │
+    └─────────────────────┬─────────────────────┘    └───────┬───────┘
+                         │                                    │
+                         │                                    │
+    ┌─────────────────────▼─────────────────────┐    ┌───────▼───────┐
+    │                                           │    │               │
+    │  2 Discover Recipes (Search/Filter)       │    │ 2 Content     │
+    │                                           │    │ Moderation    │
+    └─────────────────────┬─────────────────────┘    └───────┬───────┘
+                         │                                    │
+                         │                                    │
+    ┌─────────────────────▼─────────────────────┐    ┌───────▼───────┐
+    │                                           │    │               │
+    │  3 Manage Favorites (Add/Remove/View)     │    │ 3 System      │
+    │                                           │    │ Monitoring    │
+    └─────────────────────┬─────────────────────┘    └───────┬───────┘
+                         │                                    │
+                         │                                    │
+    ┌─────────────────────▼─────────────────────┐             │
+    │                                           │             │
+    │  4 Manage Saved Recipes (Add/Remove)      │             │
+    │                                           │             │
+    └─────────────────────┬─────────────────────┘             │
+                         │                                    │
+                         │                                    │
+    ┌─────────────────────▼─────────────────────┐             │
+    │                                           │             │
+    │  5 View Recipe Details (Ingredients)      │             │
+    │                                           │             │
+    └─────────────────────┬─────────────────────┘             │
+                         │                                    │
+                         │                                    │
+    ┌─────────────────────▼─────────────────────┐             │
+    │                                           │             │
+    │  6 Profile Management (View/Edit)         │             │
+    │                                           │             │
+    └─────────────────────┬─────────────────────┘             │
+                         │                                    │
+                         │                                    │
+    ┌─────────────────────▼─────────────────────┐             │
+    │                                           │             │
+    │  7 Recipe Categories (Browse by Type)     │             │
+    │                                           │             │
+    └─────────────────────┬─────────────────────┘             │
+                         │                                    │
+                         │                                    │
+                         │                                    │
+    ┌─────────────────────▼─────────────────────┐    ┌───────▼───────┐
+    │                                           │    │               │
+    │  D User Data (Profiles, Authentication)   │◄───┤               │
+    │                                           │    │               │
+    └─────────────────────┬─────────────────────┘    └───────────────┘
+                         │
+                         │
+    ┌─────────────────────▼─────────────────────┐
+    │                                           │
+    │  D Recipe Data (Meals, Categories)        │
+    │                                           │
+    └─────────────────────┬─────────────────────┘
+                         │
+                         │
+    ┌─────────────────────▼─────────────────────┐
+    │                                           │
+    │  D User Preferences (Favorites, Saved)    │
+    │                                           │
+    └─────────────────────┬─────────────────────┘
+                         │
+                         │
+    ┌─────────────────────▼─────────────────────┐
+    │                                           │
+    │  D External API Data (TheMealDB)          │
+    │                                           │
+    └───────────────────────────────────────────┘
+
+DATA FLOW LABELS:
+=================
+
+User → 1 Access Application: "Login/Signup"
+1 Access Application → D User Data: "Store/Verify Credentials"
+1 Access Application → 2 Discover Recipes: "Access Main App"
+
+User → 2 Discover Recipes: "Search Recipes"
+2 Discover Recipes → D External API Data: "Fetch Recipe Data"
+2 Discover Recipes → D Recipe Data: "Query Search Data"
+
+User → 3 Manage Favorites: "Manage Favorites"
+3 Manage Favorites → D User Preferences: "Store/Retrieve Favorites"
+
+User → 4 Manage Saved Recipes: "Manage Saved"
+4 Manage Saved Recipes → D User Preferences: "Store/Retrieve Saved"
+
+User → 5 View Recipe Details: "View Details"
+5 View Recipe Details → D Recipe Data: "Fetch Recipe Details"
+
+User → 6 Profile Management: "Manage Profile"
+6 Profile Management → D User Data: "View/Edit Profile Data"
+
+User → 7 Recipe Categories: "Browse Categories"
+7 Recipe Categories → D Recipe Data: "Query Category Data"
+
+Admin → 1 User Management: "Login"
+1 User Management → D User Data: "Add/Update User Account"
+
+Admin → 2 Content Moderation: "Moderate Content"
+2 Content Moderation → D Recipe Data: "Update Content Status"
+
+Admin → 3 System Monitoring: "Monitor System"
+3 System Monitoring → D User Data: "Generate Analytics Reports"
+
+PROCESS DESCRIPTIONS:
+====================
+
+1. Access Application (Sign up/Login)
+   - Handles user authentication
+   - Manages login/signup flows
+   - Validates user credentials
+   - Redirects to main app
+
+2. Discover Recipes (Search/Filter/Explore)
+   - Provides recipe search functionality
+   - Implements filtering by category, cuisine, difficulty
+   - Fetches data from external API
+   - Displays search results
+
+3. Manage Favorites (Add/Remove/View Favorites)
+   - Allows users to add recipes to favorites
+   - Provides remove functionality
+   - Displays user's favorite recipes
+   - Syncs with cloud storage
+
+4. Manage Saved Recipes (Add/Remove/View Saved)
+   - Enables saving recipes for later
+   - Provides remove functionality
+   - Displays saved recipe collection
+   - Syncs with cloud storage
+
+5. View Recipe Details (Ingredients/Instructions/Nutrition)
+   - Shows detailed recipe information
+   - Displays ingredients and measurements
+   - Shows step-by-step instructions
+   - Provides nutritional information
+
+6. Profile Management (View/Edit Profile)
+   - Displays user profile information
+   - Allows profile editing
+   - Manages user preferences
+   - Handles account settings
+
+7. Recipe Categories (Browse by Category/Area)
+   - Provides category-based browsing
+   - Shows recipes by cuisine area
+   - Implements category filtering
+   - Displays categorized results
+
+DATA STORE DESCRIPTIONS:
+========================
+
+D User Data (Profiles, Authentication)
+- Stores user account information
+- Manages authentication credentials
+- Contains user profile details
+- Handles user preferences
+
+D Recipe Data (Meals, Categories, Ingredients)
+- Stores recipe information
+- Contains meal categories
+- Manages ingredient data
+- Handles recipe metadata
+
+D User Preferences (Favorites, Saved Recipes)
+- Stores user's favorite recipes
+- Manages saved recipe collection
+- Handles user-specific data
+- Syncs across devices
+
+D External API Data (TheMealDB)
+- External recipe database
+- Provides recipe information
+- Contains meal categories
+- Supplies ingredient data
+

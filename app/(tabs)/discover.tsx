@@ -3,22 +3,24 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  Image,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    FlatList,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
 import { MealCard } from '@/components/MealCard';
-import { Meal, mealApiService } from '@/services/mealApi';
+import { aiService } from '@/services/aiService';
+import { Meal } from '@/services/mealApi';
 import FavoriteContent from './favorite';
 import FeaturedContent from './featured';
 import HomeContent from './home';
@@ -29,86 +31,60 @@ const Drawer = createDrawerNavigator();
 
 function DiscoverContent() {
   const navigation = useNavigation<any>();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [discoveredMeals, setDiscoveredMeals] = useState<Meal[]>([]);
+  const [generatedMeals, setGeneratedMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
-  const [cuisineType, setCuisineType] = useState('');
-  const [difficulty, setDifficulty] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<'Easy' | 'Medium' | 'Hard' | ''>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCuisine, setSelectedCuisine] = useState('');
+  const [showCuisineOptions, setShowCuisineOptions] = useState(false);
+  const [showDifficultyOptions, setShowDifficultyOptions] = useState(false);
+  const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
 
-  const filterOptions = [
-    'Vegetarian', 'High-Protein', 'Low-Carb', 'Sugar-free', 
-    'Low-sodium', 'Halal', 'Low-cholesterol'
+  const categoryOptions = [
+    'Beef', 'Chicken', 'Seafood', 'Vegetarian', 'Vegan', 'Pasta', 'Dessert', 'Breakfast', 'Pork', 'Lamb', 'Rice'
   ];
 
-  const cuisineTypes = [
-    'American', 'Italian', 'Mexican', 'Chinese', 'Indian', 
-    'French', 'Japanese', 'Thai', 'Mediterranean', 'Korean'
-  ];
+  const ASIAN_AREAS = useMemo(() => [
+    'Chinese', 'Japanese', 'Thai', 'Indian', 'Malaysian', 'Filipino', 'Vietnamese', 'Korean'
+  ], []);
 
-  const difficultyLevels = ['Easy', 'Medium', 'Hard'];
+  const difficultyLevels: Array<'Easy' | 'Medium' | 'Hard' | 'Random'> = ['Easy', 'Medium', 'Hard', 'Random'];
+  const cuisineOptions = [...ASIAN_AREAS, 'Random'];
+  const dietaryOptions = ['Vegetarian', 'High-Protein', 'Low-Carb', 'Sugar-free', 'Low-sodium', 'Halal', 'Low-cholesterol'];
 
-  const handleDiscoverRecipes = async () => {
-    if (!searchQuery.trim() && selectedFilters.length === 0) {
-      Alert.alert('Search Required', 'Please enter a search term or select filters to discover recipes.');
-      return;
-    }
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev => prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]);
+  };
 
+  const handleClear = () => {
+    setSelectedCategories([]);
+    setSelectedDifficulty('');
+    setSelectedCuisine('');
+    setSelectedDietary([]);
+    setGeneratedMeals([]);
+  };
+
+  const handleGenerateRecipes = async () => {
     setLoading(true);
     try {
-      let meals: Meal[] = [];
-      
-      if (searchQuery.trim()) {
-        meals = await mealApiService.searchMealsByName(searchQuery);
-      } else {
-        const randomMeals = await Promise.all([
-          mealApiService.getRandomMeal(),
-          mealApiService.getRandomMeal(),
-          mealApiService.getRandomMeal(),
-          mealApiService.getRandomMeal(),
-          mealApiService.getRandomMeal(),
-        ]);
-        meals = randomMeals.filter(meal => meal !== null) as Meal[];
-      }
+      const generated = await aiService.generateAsianRecipes({
+        query: [searchQuery, selectedDietary.length ? `Dietary: ${selectedDietary.join(', ')}` : ''].filter(Boolean).join(' | '),
+        categories: selectedCategories,
+        difficulty: selectedDifficulty,
+        cuisine: selectedCuisine,
+        maxResults: 12,
+      });
 
-      let filteredMeals = meals;
-      
-      if (cuisineType) {
-        filteredMeals = filteredMeals.filter(meal => 
-          meal.strArea.toLowerCase().includes(cuisineType.toLowerCase())
-        );
+      setGeneratedMeals(generated);
+      if (generated.length === 0) {
+        Alert.alert('No results', 'Try different categories or difficulty. Only Asian cuisines are included.');
       }
-
-      if (selectedFilters.includes('Vegetarian')) {
-        filteredMeals = filteredMeals.filter(meal => 
-          !meal.strInstructions.toLowerCase().includes('meat') &&
-          !meal.strInstructions.toLowerCase().includes('chicken') &&
-          !meal.strInstructions.toLowerCase().includes('beef')
-        );
-      }
-
-      setDiscoveredMeals(filteredMeals.slice(0, 10)); // Limit to 10 results
     } catch (error) {
-      Alert.alert('Error', 'Failed to discover recipes. Please try again.');
+      Alert.alert('Error', 'Failed to generate recipes. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleClearFilters = () => {
-    setSearchQuery('');
-    setSelectedFilters([]);
-    setCuisineType('');
-    setDifficulty('');
-    setDiscoveredMeals([]);
-  };
-
-  const toggleFilter = (filter: string) => {
-    setSelectedFilters(prev => 
-      prev.includes(filter) 
-        ? prev.filter(f => f !== filter)
-        : [...prev, filter]
-    );
   };
 
   const handleMealPress = (meal: Meal) => {
@@ -128,82 +104,89 @@ function DiscoverContent() {
         <View style={{ width: 28 }} />
       </View>
 
+      <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
       <View style={styles.heroSection}>
-        <Text style={styles.heroTitle}>Discover recipes?</Text>
-        <Text style={styles.heroSubtitle}>Search for the name and customize what you want.</Text>
+        <Text style={styles.heroTitle}>Discover recipes</Text>
+        <Text style={styles.heroSubtitle}>Describe the recipe you want to create…</Text>
       </View>
 
-      <View style={styles.filterSection}>
+      <View style={styles.generatorSection}>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search"
+            placeholder="Describe the recipe you want to create …"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            placeholderTextColor="#bbb"
+            multiline
+            numberOfLines={4}
           />
         </View>
-
-        <View style={styles.dropdownContainer}>
-          <View style={styles.dropdown}>
-            <Text style={styles.dropdownText}>
-              {cuisineType || 'Cuisine Type'}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color="#666" />
+        <View style={styles.dropdownRow}>
+          <View style={styles.dropdownBox}>
+            <TouchableOpacity onPress={() => { setShowCuisineOptions(!showCuisineOptions); setShowDifficultyOptions(false); }} style={styles.dropdownHeader}>
+              <Text style={styles.dropdownHeaderText}>{selectedCuisine || 'Cuisine Type'}</Text>
+              <Ionicons name="chevron-down" size={16} color="#666" />
+            </TouchableOpacity>
+            {showCuisineOptions && (
+              <View style={styles.dropdownMenu}>
+                {cuisineOptions.map(opt => (
+                  <TouchableOpacity key={opt} onPress={() => { setSelectedCuisine(opt === 'Random' ? '' : opt); setShowCuisineOptions(false); }} style={styles.dropdownItem}>
+                    <Text style={styles.dropdownItemText}>{opt}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
-          
-          <View style={styles.dropdown}>
-            <Text style={styles.dropdownText}>
-              {difficulty || 'Difficulty'}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color="#666" />
+
+          <View style={styles.dropdownBox}>
+            <TouchableOpacity onPress={() => { setShowDifficultyOptions(!showDifficultyOptions); setShowCuisineOptions(false); }} style={styles.dropdownHeader}>
+              <Text style={styles.dropdownHeaderText}>{selectedDifficulty || 'Difficulty'}</Text>
+              <Ionicons name="chevron-down" size={16} color="#666" />
+            </TouchableOpacity>
+            {showDifficultyOptions && (
+              <View style={styles.dropdownMenu}>
+                {difficultyLevels.map(level => (
+                  <TouchableOpacity key={level} onPress={() => { setSelectedDifficulty(level === 'Random' ? '' as any : (level as any)); setShowDifficultyOptions(false); }} style={styles.dropdownItem}>
+                    <Text style={styles.dropdownItemText}>{level}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         </View>
 
-        <View style={styles.filterPills}>
-          {filterOptions.map((filter) => (
-            <TouchableOpacity
-              key={filter}
-              style={[
-                styles.filterPill,
-                selectedFilters.includes(filter) && styles.filterPillActive
-              ]}
-              onPress={() => toggleFilter(filter)}
-            >
-              <Text style={[
-                styles.filterPillText,
-                selectedFilters.includes(filter) && styles.filterPillTextActive
-              ]}>
-                {filter}
-              </Text>
+        <View style={styles.pillGrid}>
+          {dietaryOptions.map(tag => (
+            <TouchableOpacity key={tag} onPress={() => setSelectedDietary(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])} style={[styles.pill, selectedDietary.includes(tag) && styles.pillActive]}>
+              <Text style={[styles.pillText, selectedDietary.includes(tag) && styles.pillTextActive]}>{tag}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
+        <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="globe-outline" size={16} color="#fff" />
+          <Text style={{ color: 'white', marginLeft: 6, fontSize: 12 }}>Scope: Asia only</Text>
+        </View>
+
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.clearButton} onPress={handleClearFilters}>
+          <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
             <Text style={styles.clearButtonText}>Clear All</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.discoverButton} 
-            onPress={handleDiscoverRecipes}
-            disabled={loading}
-          >
-            <Text style={styles.discoverButtonText}>
-              {loading ? 'Discovering...' : 'Discover Recipes'}
-            </Text>
+          <TouchableOpacity style={styles.discoverButton} onPress={handleGenerateRecipes} disabled={loading}>
+            <Text style={styles.discoverButtonText}>{loading ? 'Discovering…' : 'Discover Recipes'}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {discoveredMeals.length > 0 && (
+      {generatedMeals.length > 0 && (
         <View style={styles.resultsSection}>
-          <Text style={styles.resultsTitle}>
-            Discovered Recipes ({discoveredMeals.length})
-          </Text>
+          <View style={styles.resultsHeader}>
+            <Text style={styles.resultsHeaderText}>Discovered Recipes</Text>
+          </View>
           <FlatList
-            data={discoveredMeals}
+            data={generatedMeals}
             keyExtractor={(item) => item.idMeal}
             numColumns={2}
             renderItem={({ item }) => (
@@ -213,10 +196,13 @@ function DiscoverContent() {
                 style={{ width: '45%' }}
               />
             )}
+            scrollEnabled={false}
             contentContainerStyle={styles.resultsList}
           />
         </View>
       )}
+
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -285,12 +271,57 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  filterSection: {
+  generatorSection: {
     backgroundColor: '#8B7355',
     paddingHorizontal: 20,
     paddingVertical: 20,
     marginHorizontal: 16,
     borderRadius: 12,
+  },
+  dropdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  dropdownBox: {
+    position: 'relative',
+    flex: 0.48,
+  },
+  dropdownHeader: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownHeaderText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    paddingVertical: 6,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    zIndex: 10,
+  },
+  dropdownItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: '#333',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -307,48 +338,58 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
+    color: '#000',
   },
-  dropdownContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  dropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flex: 0.48,
-  },
-  dropdownText: {
+  sectionLabel: {
+    color: 'white',
     fontSize: 14,
-    color: '#666',
+    fontWeight: '600',
   },
-  filterPills: {
+  pillGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  filterPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
+  pill: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 18,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     marginRight: 8,
     marginBottom: 8,
   },
-  filterPillActive: {
+  pillActive: {
     backgroundColor: 'white',
   },
-  filterPillText: {
-    fontSize: 12,
+  pillText: {
     color: 'white',
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
-  filterPillTextActive: {
+  pillTextActive: {
+    color: '#8B7355',
+  },
+  segmented: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 8,
+  },
+  segment: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  segmentActive: {
+    backgroundColor: 'white',
+  },
+  segmentText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  segmentTextActive: {
     color: '#8B7355',
   },
   actionButtons: {
@@ -385,12 +426,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
   },
-  resultsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#8B7355',
-    marginBottom: 16,
-    textAlign: 'center',
+  resultsHeader: {
+    backgroundColor: '#1E7D32',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+  resultsHeaderText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 16,
   },
   resultsList: {
     paddingBottom: 20,

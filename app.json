@@ -43,7 +43,8 @@
       "router": {},
       "eas": {
         "projectId": "1e93168b-743a-45e9-a52f-f8777000a958"
-      }
+      },
+      "EXPO_PUBLIC_GEMINI_API_KEY": "AIzaSyCm_DK3E0bVuJ1fOhvM23WbRgM4EBUrg5s"
     }
   }
 }
