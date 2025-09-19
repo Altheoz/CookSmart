@@ -4,7 +4,6 @@ import { Meal } from './mealApi';
 export interface GenerateAsianRecipesParams {
   query?: string;
   categories?: string[];
-  difficulty?: 'Easy' | 'Medium' | 'Hard' | '';
   cuisine?: string;
   maxResults?: number;
 }
@@ -14,7 +13,6 @@ export const aiService = {
     const {
       query = '',
       categories = [],
-      difficulty = '',
       cuisine = '',
       maxResults = 12
     } = params;
@@ -30,20 +28,28 @@ export const aiService = {
       return [];
     }
 
-    const difficultyMap: Record<string, string> = {
-      Easy: 'easy',
-      Medium: 'intermediate',
-      Hard: 'advanced',
-      '': ''
-    };
-
+    // Add variation elements to generate different versions of the same dish
+    const variationElements = [
+      'traditional family recipe', 'modern restaurant style', 'regional variation', 'quick weeknight version',
+      'authentic street food style', 'healthy low-sodium version', 'spicy hot variation', 'sweet and tangy style',
+      'slow-cooked traditional', 'instant pot version', 'grilled variation', 'vegetarian adaptation'
+    ];
+    
+    const randomVariation = variationElements[Math.floor(Math.random() * variationElements.length)];
+    const timestamp = Date.now(); // Add timestamp for uniqueness
+    
     const userPrompt =
-      `Generate ${maxResults} unique Asian recipes as structured JSON. Constraints:\n` +
+      `Generate ${maxResults} Asian recipes as structured JSON. Constraints:\n` +
       `- Only Asian cuisines (Chinese, Japanese, Korean, Thai, Vietnamese, Filipino, Indian, Malaysian)\n` +
-      `${query ? `- User intent: ${query}\n` : ''}` +
+      `${query ? `- User intent: ${query} (generate DIFFERENT variations of this dish each time)\n` : ''}` +
       `${cuisine ? `- Cuisine type: ${cuisine}\n` : ''}` +
       `${categories.length ? `- Prefer categories: ${categories.join(', ')}\n` : ''}` +
-      `${difficulty ? `- Difficulty: ${difficultyMap[difficulty]}\n` : ''}` +
+      `- CRITICAL: Generate exactly ${Math.ceil(maxResults/3)} beginner recipes, ${Math.ceil(maxResults/3)} intermediate recipes, and ${Math.ceil(maxResults/3)} advanced recipes\n` +
+      `- Beginner: Simple recipes with 5-8 ingredients, 15-30 min cooking time, basic techniques\n` +
+      `- Intermediate: Moderate recipes with 8-12 ingredients, 30-60 min cooking time, some advanced techniques\n` +
+      `- Advanced: Complex recipes with 12+ ingredients, 60+ min cooking time, advanced techniques and skills required\n` +
+      `- Variation focus: ${randomVariation}\n` +
+      `- IMPORTANT: If user searches for a specific dish (like "adobo"), generate DIFFERENT variations of that same dish each time - different ingredients, cooking methods, regional styles, or preparation techniques. Make each recipe unique while staying true to the dish.\n` +
       `- Include: title, description, cuisine_type (one of: chinese, japanese, korean, thai, vietnamese, filipino, indian, malaysian), ` +
       `difficulty_level (beginner|intermediate|advanced), total_time, ingredients (item, amount), instructions (step, instruction), tags.\n` +
       `- Return JSON object with key "recipes" as an array. No extra commentary.`;
@@ -56,7 +62,7 @@ export const aiService = {
         }
       ],
       generationConfig: {
-        temperature: 0.9,
+        temperature: 1.2,
         response_mime_type: 'application/json'
       }
     } as any;

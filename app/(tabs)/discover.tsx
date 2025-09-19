@@ -5,16 +5,16 @@ import { router } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  FlatList,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
@@ -34,11 +34,9 @@ function DiscoverContent() {
   const [generatedMeals, setGeneratedMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<'Easy' | 'Medium' | 'Hard' | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState('');
   const [showCuisineOptions, setShowCuisineOptions] = useState(false);
-  const [showDifficultyOptions, setShowDifficultyOptions] = useState(false);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
 
   const categoryOptions = [
@@ -49,8 +47,7 @@ function DiscoverContent() {
     'Chinese', 'Japanese', 'Thai', 'Indian', 'Malaysian', 'Filipino', 'Vietnamese', 'Korean'
   ], []);
 
-  const difficultyLevels: Array<'Easy' | 'Medium' | 'Hard' | 'Random'> = ['Easy', 'Medium', 'Hard', 'Random'];
-  const cuisineOptions = [...ASIAN_AREAS, 'Random'];
+  const cuisineOptions = ['Random', ...ASIAN_AREAS];
   const dietaryOptions = ['Vegetarian', 'High-Protein', 'Low-Carb', 'Sugar-free', 'Low-sodium', 'Halal', 'Low-cholesterol'];
 
   const toggleCategory = (category: string) => {
@@ -59,7 +56,6 @@ function DiscoverContent() {
 
   const handleClear = () => {
     setSelectedCategories([]);
-    setSelectedDifficulty('');
     setSelectedCuisine('');
     setSelectedDietary([]);
     setGeneratedMeals([]);
@@ -71,7 +67,6 @@ function DiscoverContent() {
       const generated = await aiService.generateAsianRecipes({
         query: [searchQuery, selectedDietary.length ? `Dietary: ${selectedDietary.join(', ')}` : ''].filter(Boolean).join(' | '),
         categories: selectedCategories,
-        difficulty: selectedDifficulty,
         cuisine: selectedCuisine,
         maxResults: 12,
       });
@@ -112,7 +107,6 @@ function DiscoverContent() {
 
       <View style={styles.generatorSection}>
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Describe the recipe you want to create …"
@@ -125,7 +119,7 @@ function DiscoverContent() {
         </View>
         <View style={styles.dropdownRow}>
           <View style={styles.dropdownBox}>
-            <TouchableOpacity onPress={() => { setShowCuisineOptions(!showCuisineOptions); setShowDifficultyOptions(false); }} style={styles.dropdownHeader}>
+            <TouchableOpacity onPress={() => setShowCuisineOptions(!showCuisineOptions)} style={styles.dropdownHeader}>
               <Text style={styles.dropdownHeaderText}>{selectedCuisine || 'Cuisine Type'}</Text>
               <Ionicons name="chevron-down" size={16} color="#666" />
             </TouchableOpacity>
@@ -134,22 +128,6 @@ function DiscoverContent() {
                 {cuisineOptions.map(opt => (
                   <TouchableOpacity key={opt} onPress={() => { setSelectedCuisine(opt === 'Random' ? '' : opt); setShowCuisineOptions(false); }} style={styles.dropdownItem}>
                     <Text style={styles.dropdownItemText}>{opt}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-
-          <View style={styles.dropdownBox}>
-            <TouchableOpacity onPress={() => { setShowDifficultyOptions(!showDifficultyOptions); setShowCuisineOptions(false); }} style={styles.dropdownHeader}>
-              <Text style={styles.dropdownHeaderText}>{selectedDifficulty || 'Difficulty'}</Text>
-              <Ionicons name="chevron-down" size={16} color="#666" />
-            </TouchableOpacity>
-            {showDifficultyOptions && (
-              <View style={styles.dropdownMenu}>
-                {difficultyLevels.map(level => (
-                  <TouchableOpacity key={level} onPress={() => { setSelectedDifficulty(level === 'Random' ? '' as any : (level as any)); setShowDifficultyOptions(false); }} style={styles.dropdownItem}>
-                    <Text style={styles.dropdownItemText}>{level}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -285,7 +263,7 @@ const styles = StyleSheet.create({
   },
   dropdownBox: {
     position: 'relative',
-    flex: 0.48,
+    flex: 1,
   },
   dropdownHeader: {
     backgroundColor: 'white',
@@ -335,11 +313,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   searchInput: {
-    flex: 1,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#000',
-  },
+  flex: 1,
+  fontSize: 16,
+  color: '#000',
+  height: 120, 
+  textAlignVertical: 'top',
+},
+
   sectionLabel: {
     color: 'white',
     fontSize: 14,
