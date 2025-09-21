@@ -6,15 +6,16 @@ import { router } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
-  Dimensions,
-  FlatList,
-  Image,
-  ImageBackground,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
@@ -35,6 +36,9 @@ function FeaturedContent() {
   const [featuredMeals, setFeaturedMeals] = useState<Meal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Meal[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     loadFeaturedMeals();
@@ -87,29 +91,56 @@ function FeaturedContent() {
     />
   );
 
+  const filteredMeals = featuredMeals.filter(m =>
+    m.strMeal.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const displayMeals = searchQuery.trim().length > 0 ? searchResults : filteredMeals;
+
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      const q = searchQuery.trim();
+      if (q.length === 0) {
+        setSearchResults([]);
+        setSearching(false);
+        return;
+      }
+      setSearching(true);
+      const results = await mealApiService.searchMealsByName(q);
+      if (!active) return;
+      setSearchResults(results);
+      setSearching(false);
+    };
+    const timer = setTimeout(run, 350);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.bgBlobTop} />
+      <View style={styles.bgBlobMid} />
+      <View style={styles.bgBlobBottom} />
+
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.openDrawer()}>
           <Ionicons name="menu" size={28} color="black" />
         </TouchableOpacity>
-        <Image
-          source={require('@/assets/images/imgg.png')}
-          className="w-12 h-12 rounded-full"
-        />
+        <View style={styles.imageWrapper}>
+          <Image
+            source={require('@/assets/images/imgg.png')}
+            style={styles.profileImage}
+            resizeMode="cover"
+          />
+        </View>
         <View style={{ width: 28 }} />
       </View>
 
-      <ImageBackground
-        source={require('@/assets/images/featured.png')}
-        style={styles.banner}
-        imageStyle={styles.bannerImage}
-      >
-      </ImageBackground>
-
-
       <FlatList
-        data={featuredMeals}
+        data={displayMeals}
         keyExtractor={(item) => item.idMeal}
         numColumns={2}
         renderItem={renderMealCard}
@@ -117,7 +148,20 @@ function FeaturedContent() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View>
+            <View style={styles.headerContainer}>
+              <Text style={styles.headerTitle}>Featured Recipes</Text>
+              <Text style={styles.headerSubtitle}>Random picks, refreshed every visit</Text>
+            </View>
 
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search featured recipes"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
 
             <Text style={styles.sectionTitle}>Browse Categories</Text>
             <FlatList
@@ -139,6 +183,20 @@ function FeaturedContent() {
             />
             <Text style={styles.sectionTitle}>Featured</Text>
           </View>
+        }
+        ListEmptyComponent={
+          searching ? (
+            <View style={styles.emptyState}> 
+              <ActivityIndicator size="small" color="orange" />
+              <Text style={styles.emptyText}>Searching recipes…</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={48} color="#bbb" />
+              <Text style={styles.emptyText}>No recipes found</Text>
+              <Text style={styles.emptySubtext}>Try a different keyword</Text>
+            </View>
+          )
         }
       />
     </SafeAreaView>
@@ -183,7 +241,37 @@ export default function FeatureScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFE5D4',
+    backgroundColor: '#FFFFFF',
+  },
+  bgBlobTop: {
+    position: 'absolute',
+    top: -90,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: '#FFF4EB',
+    opacity: 0.8,
+  },
+  bgBlobMid: {
+    position: 'absolute',
+    top: 120,
+    left: -80,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: '#FEE0C8',
+    opacity: 0.7,
+  },
+  bgBlobBottom: {
+    position: 'absolute',
+    bottom: -100,
+    right: -60,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: '#FFEBDD',
+    opacity: 0.9,
   },
   topBar: {
     flexDirection: 'row',
@@ -191,43 +279,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomEndRadius: 12,
+    borderBottomStartRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
- banner: {
-    width: screenWidth,
-    aspectRatio: 16 / 11, 
+  imageWrapper: {
     borderRadius: 12,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 7,
+    width: 60,
+    height: 60,
+    position: 'relative',
+    top: 15,
   },
-  bannerImage: {
-    resizeMode: 'cover',
-  },
-  bannerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  bannerQuote: {
-    fontSize: 18,
-    color: 'white',
-    fontStyle: 'italic',
-    marginBottom: 6,
-  },
-  bannerAuthor: {
-    fontSize: 14,
-    color: 'white',
-    fontWeight: 'bold',
+  profileImage: {
+    width: '100%',
+    height: '100%',
   },
   sectionTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#8B7355',
-   
+    fontWeight: '700',
+    color: '#000',
+    marginTop: 12,
     marginBottom: 16,
   },
   mealsList: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: '#666',
   },
   categoriesList: {
     paddingHorizontal: 16,
@@ -258,5 +359,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#000',
     fontWeight: '600',
+  },
+  headerContainer: {
+    marginTop: 24,
+    paddingHorizontal: 24,
+  },
+  headerTitle: {
+    fontSize: 30,
+    textAlign: 'center',
+    color: '#000',
+    fontFamily: 'Sansita',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 6,
+    color: '#555',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
   },
 });

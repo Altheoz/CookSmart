@@ -5,14 +5,14 @@ import { router } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
-  FlatList,
-  Image,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    FlatList,
+    Image,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
@@ -58,24 +58,34 @@ function FavoriteContent() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.bgBlobTop} />
+      <View style={styles.bgBlobMid} />
+      <View style={styles.bgBlobBottom} />
+
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.openDrawer()}>
           <Ionicons name="menu" size={28} color="black" />
         </TouchableOpacity>
-        <Image
-          source={require('@/assets/images/imgg.png')}
-          className="w-12 h-12 rounded-full"
-        />
+        <View style={styles.imageWrapper}>
+          <Image
+            source={require('@/assets/images/imgg.png')}
+            style={styles.profileImage}
+            resizeMode="cover"
+          />
+        </View>
         <View style={{ width: 28 }} />
       </View>
 
-      <Text style={styles.title}>Favorites</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>Favorites</Text>
+        <Text style={styles.headerSubtitle}>Your loved recipes in one place</Text>
+      </View>
 
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search"
+          placeholder="Search favorites"
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -97,6 +107,9 @@ function FavoriteContent() {
           <Text style={styles.emptySubtext}>
             Add recipes to your favorites to see them here
           </Text>
+          <TouchableOpacity style={styles.ctaButton} onPress={() => navigation.navigate('DrawerDiscover')}>
+            <Text style={styles.ctaButtonText}>Discover Recipes</Text>
+          </TouchableOpacity>
         </View>
       )}
     </SafeAreaView>
@@ -141,7 +154,37 @@ export default function FavoriteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFE5D4',
+    backgroundColor: '#FFFFFF',
+  },
+  bgBlobTop: {
+    position: 'absolute',
+    top: -90,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: '#FFF4EB',
+    opacity: 0.8,
+  },
+  bgBlobMid: {
+    position: 'absolute',
+    top: 120,
+    left: -80,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: '#FEE0C8',
+    opacity: 0.7,
+  },
+  bgBlobBottom: {
+    position: 'absolute',
+    bottom: -100,
+    right: -60,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: '#FFEBDD',
+    opacity: 0.9,
   },
   topBar: {
     flexDirection: 'row',
@@ -149,23 +192,62 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomEndRadius: 12,
+    borderBottomStartRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#8B7355',
+  imageWrapper: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 7,
+    width: 60,
+    height: 60,
+    position: 'relative',
+    top: 15,
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  headerContainer: {
+    marginTop: 24,
+    paddingHorizontal: 24,
+  },
+  headerTitle: {
+    fontSize: 30,
     textAlign: 'center',
-    marginTop: 20,
-    marginBottom: 20,
+    color: '#000',
+    fontFamily: 'Sansita',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 6,
+    color: '#555',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 12,
     marginHorizontal: 16,
+    marginTop: 16,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   searchIcon: {
     marginRight: 8,
@@ -187,14 +269,26 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#666',
+    fontWeight: '700',
+    color: '#000',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: '#666',
     textAlign: 'center',
+  },
+  ctaButton: {
+    marginTop: 16,
+    backgroundColor: 'orange',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    elevation: 2,
+  },
+  ctaButtonText: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });

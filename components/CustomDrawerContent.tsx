@@ -6,6 +6,14 @@ import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRecipeContext } from '../contexts/RecipeContext';
 
+type MenuItem = {
+  label: string;
+  lib: 'ion' | 'feather' | 'material' | 'fa';
+  name: string;
+  route: string;
+  count?: number;
+};
+
 export default function CustomDrawerContent(props: any) {
   const user = getAuth().currentUser;
   const [avatar, setAvatar] = useState(require('@/assets/images/avatars/avatar_1.jpg'));
@@ -23,19 +31,19 @@ export default function CustomDrawerContent(props: any) {
     return unsubscribe;
   }, [props.navigation]);
 
-  const menuItems = [
-    { label: 'Home', icon: <Ionicons name="home" size={20} color="black" />, route: 'DrawerHome' },
-    { label: 'Featured Recipe', icon: <Feather name="star" size={20} color="black" />, route: 'DrawerFeatured' },
-    { label: 'Discover Recipe', icon: <MaterialIcons name="explore" size={20} color="black" />, route: 'DrawerDiscover' },
-    { label: 'Favorites', icon: <FontAwesome name="heart" size={20} color="black" />, route: 'DrawerFavorite', count: getFavoritesCount() },
-    { label: 'Recipes Saved', icon: <Ionicons name="bookmark" size={20} color="black" />, route: 'DrawerSaved', count: getSavedCount() },
+  const menuItems: MenuItem[] = [
+    { label: 'Home', lib: 'ion', name: 'home', route: 'DrawerHome' },
+    { label: 'Featured Recipe', lib: 'feather', name: 'star', route: 'DrawerFeatured' },
+    { label: 'Discover Recipe', lib: 'material', name: 'explore', route: 'DrawerDiscover' },
+    { label: 'Favorites', lib: 'fa', name: 'heart', route: 'DrawerFavorite', count: getFavoritesCount() },
+    { label: 'Recipes Saved', lib: 'ion', name: 'bookmark', route: 'DrawerSaved', count: getSavedCount() },
   ];
 
   const currentRoute = props.state.routeNames[props.state.index];
 
   return (
     <DrawerContentScrollView contentContainerStyle={styles.drawerContainer}>
-  
+
       <View style={styles.header}>
         <Image source={require('@/assets/images/imgg.png')} style={styles.logo} />
         <View>
@@ -47,6 +55,18 @@ export default function CustomDrawerContent(props: any) {
       <View style={styles.menuContainer}>
         {menuItems.map((item, index) => {
           const isActive = currentRoute === item.route;
+          const iconColor = isActive ? 'orange' : '#1f2937';
+          const renderIcon = () => {
+            if (item.lib === 'ion') return <Ionicons name={item.name as any} size={20} color={iconColor} />;
+            if (item.lib === 'feather') return <Feather name={item.name as any} size={20} color={iconColor} />;
+            if (item.lib === 'material') return <MaterialIcons name={item.name as any} size={20} color={iconColor} />;
+            return <FontAwesome name={item.name as any} size={20} color={iconColor} />;
+          };
+          const countStyle = [
+            styles.menuCount,
+            item.route === 'DrawerFavorite' && { backgroundColor: 'rgba(220,20,60,0.15)', color: 'crimson' },
+            item.route === 'DrawerSaved' && { backgroundColor: 'rgba(30,144,255,0.15)', color: 'dodgerblue' },
+          ];
           return (
             <TouchableOpacity
               key={index}
@@ -57,13 +77,13 @@ export default function CustomDrawerContent(props: any) {
               onPress={() => props.navigation.navigate(item.route)}
             >
               <View style={styles.menuItemLeft}>
-                {item.icon}
+                {renderIcon()}
                 <Text style={[styles.menuLabel, isActive && styles.menuLabelActive]}>
                   {item.label}
                 </Text>
               </View>
               {item.count !== undefined && (
-                <Text style={styles.menuCount}>{item.count}</Text>
+                <Text style={countStyle as any}>{item.count}</Text>
               )}
             </TouchableOpacity>
           );
@@ -71,13 +91,20 @@ export default function CustomDrawerContent(props: any) {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.profileRow} onPress={() => props.navigation.navigate('DrawerProfile')}>
-          <Image source={avatar} style={styles.avatar} />
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileEmail}>{user?.email}</Text>
-            <Text style={styles.profileStatus}>Ready to Cook</Text>
-          </View>
-        </TouchableOpacity>
+        <View style={styles.profileRow}>
+          <TouchableOpacity style={styles.profileLeft} onPress={() => props.navigation.navigate('DrawerProfile')}>
+            <Image source={avatar} style={styles.avatar} />
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileEmail} numberOfLines={1}>
+                {user?.email}
+              </Text>
+              <Text style={styles.profileStatus}>Ready to Cook</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" onPress={() => props.navigation.navigate('DrawerProfile')}>
+            <Ionicons name="settings-outline" size={22} color="#1f2937" />
+          </TouchableOpacity>
+        </View>
       </View>
     </DrawerContentScrollView>
   );
@@ -85,17 +112,21 @@ export default function CustomDrawerContent(props: any) {
 
 const styles = StyleSheet.create({
   drawerContainer: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: 'white', 
+    paddingTop: 4,
+    paddingBottom: 8,
   },
+  
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
+    paddingTop: 16,
     paddingBottom: 16,
     marginBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#16a34a', 
+    borderBottomColor: '#f97316', 
   },
   logo: {
     width: 40,
@@ -107,11 +138,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 25,
     fontWeight: 'bold',
-    color: '#166534', 
+    color: '#000', 
   },
   subtitle: {
     fontSize: 12,
-    color: '#22c55e', 
+    color: '#555', 
   },
   menuContainer: {
     marginTop: 10,
@@ -127,7 +158,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   menuItemActive: {
-    backgroundColor: '#bbf7d0', 
+    backgroundColor: 'rgba(255,165,0,0.12)',
+    borderLeftWidth: 4,
+    borderLeftColor: 'orange',
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -140,7 +173,7 @@ const styles = StyleSheet.create({
   },
   menuLabelActive: {
     fontWeight: '600',
-    color: '#166534', 
+    color: 'orange', 
   },
   menuCount: {
     backgroundColor: '#e5e7eb',
@@ -153,11 +186,18 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#16a34a', 
+    borderTopColor: '#f97316', 
   },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  profileLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
   },
   avatar: {
     width: 34,
@@ -166,14 +206,16 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     marginLeft: 12,
+    flex: 1,
   },
   profileEmail: {
     fontSize: 14,
     fontWeight: '600',
     color: '#000',
+    maxWidth: '100%',
   },
   profileStatus: {
     fontSize: 12,
-    color: '#22c55e', 
+    color: '#555', 
   },
 });
