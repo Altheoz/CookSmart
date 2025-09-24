@@ -105,7 +105,10 @@ export default function MealDetailScreen() {
             <Text style={styles.addToListText}>Add to list</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.startCookingButton}>
+          <TouchableOpacity 
+            style={styles.startCookingButton}
+            onPress={() => navigation.navigate('CookingInterface', { meal })}
+          >
             <Ionicons name="play" size={20} color="white" />
             <Text style={styles.startCookingText}>Start cooking now</Text>
           </TouchableOpacity>
