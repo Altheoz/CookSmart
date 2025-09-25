@@ -2,15 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 import { useRecipeContext } from '@/contexts/RecipeContext';
@@ -20,7 +20,7 @@ export default function MealDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { meal } = route.params;
-  const { addToFavorites, addToSaved, isFavorite, isSaved } = useRecipeContext();
+  const { addToFavorites, addToSaved, isFavorite, isSaved, removeFromSaved } = useRecipeContext();
   const [searchQuery, setSearchQuery] = useState('');
 
   const ingredients = React.useMemo(() => mealApiService.extractIngredients(meal), [meal.idMeal]);
@@ -36,12 +36,13 @@ export default function MealDetailScreen() {
     }
   };
 
-  const handleAddToSaved = async () => {
+  const handleToggleSaved = async () => {
     if (isSaved(meal.idMeal)) {
-      Alert.alert('Already Saved', 'This recipe is already saved.');
+      await removeFromSaved(meal.idMeal);
+      Alert.alert('Removed', 'Recipe removed from your saved list.');
     } else {
       await addToSaved(meal);
-      Alert.alert('Recipe Saved', 'Recipe has been saved to your collection.');
+      Alert.alert('Saved', 'Recipe saved to your collection.');
     }
   };
 
@@ -100,9 +101,8 @@ export default function MealDetailScreen() {
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.addToListButton} onPress={handleAddToSaved}>
-            <Ionicons name="add" size={20} color="white" />
-            <Text style={styles.addToListText}>Add to list</Text>
+          <TouchableOpacity style={[styles.iconPill, isSaved(meal.idMeal) && styles.iconPillActive]} onPress={handleToggleSaved}>
+            <Ionicons name={isSaved(meal.idMeal) ? "bookmark" : "bookmark-outline"} size={22} color={isSaved(meal.idMeal) ? 'white' : '#111'} />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -113,13 +113,12 @@ export default function MealDetailScreen() {
             <Text style={styles.startCookingText}>Start cooking now</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.favoriteButton} onPress={handleAddToFavorites}>
+          <TouchableOpacity style={styles.iconPill} onPress={handleAddToFavorites}>
             <Ionicons 
               name={isFavorite(meal.idMeal) ? "heart" : "heart-outline"} 
-              size={24} 
-              color={isFavorite(meal.idMeal) ? "#ff6b6b" : "#666"} 
+              size={22} 
+              color={isFavorite(meal.idMeal) ? "#ff6b6b" : "#111"} 
             />
-            <Text style={styles.favoriteCount}>100</Text>
           </TouchableOpacity>
         </View>
 
@@ -241,19 +240,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
   },
-  addToListButton: {
-    backgroundColor: '#4ecdc4',
-    borderRadius: 8,
-    paddingVertical: 8,
+  iconPill: {
+    backgroundColor: 'white',
+    borderRadius: 999,
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
-  addToListText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '500',
+  iconPillActive: {
+    backgroundColor: '#0ea5e9',
+    borderColor: '#0ea5e9',
   },
   startCookingButton: {
     backgroundColor: '#FF6B35',
@@ -271,11 +270,6 @@ const styles = StyleSheet.create({
   },
   favoriteButton: {
     alignItems: 'center',
-  },
-  favoriteCount: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
   },
   ingredientsSection: {
     flexDirection: 'row',
