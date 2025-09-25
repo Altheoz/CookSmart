@@ -3,23 +3,22 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Speech from 'expo-speech';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Dimensions,
-    PermissionsAndroid,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    Vibration,
-    View
+  Alert,
+  Animated,
+  Dimensions,
+  PermissionsAndroid,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Vibration,
+  View
 } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-// Extend Window interface for speech recognition
 declare global {
   interface Window {
     SpeechRecognition: any;
@@ -31,7 +30,7 @@ declare global {
 interface CookingStep {
   step: number;
   instruction: string;
-  timer?: number; // in seconds
+  timer?: number;
   tip?: string;
   expectation?: string;
 }
@@ -55,14 +54,14 @@ export default function CookingInterfaceScreen() {
   const [readSteps, setReadSteps] = useState<Set<number>>(new Set());
   const [isRecognizing, setIsRecognizing] = useState(false);
   const [lastCommandTime, setLastCommandTime] = useState(0);
-  const [voiceActivated, setVoiceActivated] = useState(false); // Start voice only after user taps OK
+  const [voiceActivated, setVoiceActivated] = useState(false); 
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
 
-  // Generate cooking tips based on instruction content
+
   const generateCookingTip = (instruction: string): string => {
     const lowerInstruction = instruction.toLowerCase();
     
@@ -81,7 +80,7 @@ export default function CookingInterfaceScreen() {
     }
   };
 
-  // Generate expectations based on instruction content
+
   const generateExpectation = (instruction: string): string => {
     const lowerInstruction = instruction.toLowerCase();
     
@@ -100,7 +99,6 @@ export default function CookingInterfaceScreen() {
     }
   };
 
-  // Parse instructions into steps with timers
   const cookingSteps: CookingStep[] = React.useMemo(() => {
     const rawInstructions = typeof meal?.strInstructions === 'string' ? meal.strInstructions : '';
     const instructions = rawInstructions
@@ -110,7 +108,6 @@ export default function CookingInterfaceScreen() {
       .filter(Boolean);
 
     return instructions.map((instruction, index) => {
-      // Extract timer information from instruction text
       const timerMatch = instruction.match(/(\d+)\s*(minute|min|hour|hr|second|sec)/i);
       let timer = 0;
       if (timerMatch) {
@@ -125,7 +122,6 @@ export default function CookingInterfaceScreen() {
         }
       }
 
-      // Generate tips and expectations based on step content
       const tip = generateCookingTip(instruction);
       const expectation = generateExpectation(instruction);
 
@@ -139,10 +135,8 @@ export default function CookingInterfaceScreen() {
     });
   }, [meal.idMeal]);
 
-  // Calculate progress
   const progress = cookingSteps.length > 0 ? ((currentStep + 1) / cookingSteps.length) * 100 : 0;
 
-  // Request microphone permission
   const requestMicrophonePermission = async () => {
     if (Platform.OS === 'android') {
       try {
@@ -165,14 +159,11 @@ export default function CookingInterfaceScreen() {
     return true;
   };
 
-  // Web-based voice recognition using Web Speech API
   const startListening = () => {
     if (!isVoiceEnabled || isRecognizing || speaking) return;
     
-    // Check if speech recognition is available
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       console.log('Speech recognition not supported, using fallback');
-      // Fallback to simulated recognition
       simulateVoiceRecognition();
       return;
     }
@@ -199,9 +190,8 @@ export default function CookingInterfaceScreen() {
         console.log('Speech recognition result:', command);
         setRecognitionResult(command);
         
-        // Prevent processing if we just spoke (avoid feedback loop)
         const now = Date.now();
-        if (now - lastCommandTime > 3000) { // 3 second cooldown after speaking
+        if (now - lastCommandTime > 3000) { 
           processVoiceCommand(command);
           setLastCommandTime(now);
         }
@@ -209,7 +199,7 @@ export default function CookingInterfaceScreen() {
       
       recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
-        // Fallback to simulated recognition
+        
         simulateVoiceRecognition();
       };
       
@@ -228,13 +218,12 @@ export default function CookingInterfaceScreen() {
     }
   };
 
-  // Fallback simulated voice recognition
+
   const simulateVoiceRecognition = () => {
     setIsRecognizing(true);
     setIsListening(true);
     setRecognitionResult('');
     
-    // Simulate realistic voice recognition with better command selection
     setTimeout(() => {
       const commands = [
         'next step', 'previous step', 'go back', 'pause', 'resume', 
@@ -243,7 +232,6 @@ export default function CookingInterfaceScreen() {
       const randomCommand = commands[Math.floor(Math.random() * commands.length)];
       setRecognitionResult(randomCommand);
       
-      // Prevent processing if we just spoke (avoid feedback loop)
       const now = Date.now();
       if (now - lastCommandTime > 3000) {
         processVoiceCommand(randomCommand);
@@ -258,27 +246,23 @@ export default function CookingInterfaceScreen() {
     }, 1500);
   };
 
-  // Auto-start listening when voice is enabled (with feedback loop prevention) and after user taps OK
   useEffect(() => {
     if (voiceActivated && isVoiceEnabled && hasPermission && !isRecognizing && !speaking) {
       const interval = setInterval(() => {
         const now = Date.now();
-        // Only listen if we haven't spoken recently (prevent feedback loop)
         if (!isRecognizing && !speaking && isVoiceEnabled && (now - lastCommandTime > 5000)) {
           startListening();
         }
-      }, 4000); // Listen every 4 seconds
+      }, 4000);
 
       return () => clearInterval(interval);
     }
   }, [voiceActivated, isVoiceEnabled, hasPermission, isRecognizing, speaking, lastCommandTime]);
 
-  // Process voice commands - EXECUTE ACTIONS with improved accuracy
   const processVoiceCommand = (command: string) => {
     const lowerCommand = command.toLowerCase().trim();
     console.log('Voice command received:', lowerCommand);
     
-    // More accurate keyword matching with multiple variations
     const nextKeywords = ['next', 'next step', 'forward', 'continue', 'proceed', 'go next'];
     const prevKeywords = ['previous', 'previous step', 'back', 'go back', 'return', 'last step'];
     const pauseKeywords = ['pause', 'stop', 'halt', 'wait'];
@@ -290,7 +274,6 @@ export default function CookingInterfaceScreen() {
     const voiceOffKeywords = ['voice off', 'stop listening', 'disable voice', 'turn off voice'];
     const voiceOnKeywords = ['voice on', 'start listening', 'enable voice', 'turn on voice'];
     
-    // Check for exact matches first, then partial matches
     if (nextKeywords.some(keyword => lowerCommand.includes(keyword))) {
       goToNextStep();
     } else if (prevKeywords.some(keyword => lowerCommand.includes(keyword))) {
@@ -314,18 +297,14 @@ export default function CookingInterfaceScreen() {
       setIsVoiceEnabled(true);
       Alert.alert('Voice Commands Enabled', 'Voice commands are now active!');
     } else {
-      // If no command recognized, show what was heard
       console.log('No command recognized for:', lowerCommand);
     }
   };
 
-  // Navigation functions
   const goToNextStep = () => {
     if (currentStep < cookingSteps.length - 1) {
-      // Mark current step as completed
       setCompletedSteps(prev => new Set([...prev, currentStep]));
       
-      // Animate to next step
       Animated.sequence([
         Animated.timing(slideAnim, {
           toValue: -screenWidth,
@@ -341,9 +320,7 @@ export default function CookingInterfaceScreen() {
       
        setCurrentStep(currentStep + 1);
        stopTimer();
-       // speakInstruction(cookingSteps[currentStep + 1].instruction); // Removed auto-speak
       
-      // Update progress animation
       Animated.timing(progressAnim, {
         toValue: ((currentStep + 2) / cookingSteps.length) * 100,
         duration: 300,
@@ -354,7 +331,6 @@ export default function CookingInterfaceScreen() {
 
   const goToPreviousStep = () => {
     if (currentStep > 0) {
-      // Remove from completed steps
       setCompletedSteps(prev => {
         const newSet = new Set(prev);
         newSet.delete(currentStep - 1);
@@ -363,9 +339,7 @@ export default function CookingInterfaceScreen() {
       
        setCurrentStep(currentStep - 1);
        stopTimer();
-       // speakInstruction(cookingSteps[currentStep - 1].instruction); // Removed auto-speak
       
-      // Update progress animation
       Animated.timing(progressAnim, {
         toValue: (currentStep / cookingSteps.length) * 100,
         duration: 300,
@@ -392,7 +366,6 @@ export default function CookingInterfaceScreen() {
     }
   };
 
-  // Timer functions
   const startTimer = () => {
     const currentStepData = cookingSteps[currentStep];
     if (currentStepData.timer) {
@@ -400,7 +373,6 @@ export default function CookingInterfaceScreen() {
       setTimerActive(true);
       setIsPlaying(true);
       
-      // Start pulse animation for active timer
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -420,7 +392,6 @@ export default function CookingInterfaceScreen() {
       timerRef.current = setInterval(() => {
         setTimeRemaining(prev => {
           if (prev <= 1) {
-            // Timer finished
             Vibration.vibrate([0, 500, 200, 500]);
             Alert.alert(
               'Timer Complete!', 
@@ -446,7 +417,7 @@ export default function CookingInterfaceScreen() {
     }
     setTimerActive(false);
     setIsPlaying(false);
-    pulseAnim.setValue(1); // Reset pulse animation
+    pulseAnim.setValue(1);
   };
 
   const resetTimer = () => {
@@ -457,10 +428,9 @@ export default function CookingInterfaceScreen() {
     }
   };
 
-  // Text-to-speech with feedback loop prevention
   const speakInstruction = async (instruction: string) => {
     setSpeaking(true);
-    setLastCommandTime(Date.now()); // Track when we start speaking
+    setLastCommandTime(Date.now());
     try {
       await Speech.speak(instruction, {
         language: 'en',
@@ -474,7 +444,6 @@ export default function CookingInterfaceScreen() {
     }
   };
 
-  // Request permission on mount; start only after user confirms
   useEffect(() => {
     const initVoiceRecognition = async () => {
       const permission = await requestMicrophonePermission();
@@ -496,12 +465,10 @@ export default function CookingInterfaceScreen() {
     initVoiceRecognition();
   }, []);
 
-  // Initialize progress animation
   useEffect(() => {
     progressAnim.setValue(((currentStep + 1) / cookingSteps.length) * 100);
   }, [cookingSteps.length]);
 
-  // Auto-speak when step changes - ONLY ONCE PER STEP and only after user tapped OK
   useEffect(() => {
     if (voiceActivated && cookingSteps[currentStep] && !readSteps.has(currentStep)) {
       speakInstruction(cookingSteps[currentStep].instruction);
@@ -509,7 +476,6 @@ export default function CookingInterfaceScreen() {
     }
   }, [voiceActivated, currentStep, cookingSteps, readSteps]);
 
-  // Pulse animation for listening state
   useEffect(() => {
     if (isListening) {
       const pulse = Animated.loop(
@@ -532,7 +498,6 @@ export default function CookingInterfaceScreen() {
     }
   }, [isListening]);
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) {
@@ -549,7 +514,6 @@ export default function CookingInterfaceScreen() {
 
   const currentStepData = cookingSteps[currentStep];
 
-  // Safety check - if no cooking steps, show error
   if (cookingSteps.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
@@ -572,7 +536,6 @@ export default function CookingInterfaceScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
@@ -589,7 +552,6 @@ export default function CookingInterfaceScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
           <Animated.View 
@@ -611,7 +573,6 @@ export default function CookingInterfaceScreen() {
       </View>
 
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Current Step Card */}
         <Animated.View 
           style={[
             styles.stepCard,
@@ -665,7 +626,6 @@ export default function CookingInterfaceScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Tips and Expectations */}
           <View style={styles.tipsContainer}>
             <View style={styles.tipBox}>
               <View style={styles.tipHeader}>
@@ -685,7 +645,6 @@ export default function CookingInterfaceScreen() {
           </View>
         </Animated.View>
 
-        {/* Active Timers */}
         {currentStepData?.timer && (
           <View style={styles.timerCard}>
             <View style={styles.timerHeader}>
@@ -718,7 +677,6 @@ export default function CookingInterfaceScreen() {
           </View>
         )}
 
-        {/* Navigation Controls */}
         <View style={styles.navigationCard}>
           <Text style={styles.navigationTitle}>Step Navigation</Text>
           <View style={styles.navigationControls}>
@@ -742,7 +700,6 @@ export default function CookingInterfaceScreen() {
           </View>
         </View>
 
-         {/* Voice AI Recognition */}
          <View style={styles.voiceSection}>
            <View style={styles.voiceHeader}>
              <Ionicons name="mic" size={20} color="white" />
