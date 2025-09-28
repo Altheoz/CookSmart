@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import * as Speech from 'expo-speech';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -56,7 +56,7 @@ export default function CookingInterfaceScreen() {
   const [lastCommandTime, setLastCommandTime] = useState(0);
   const [voiceActivated, setVoiceActivated] = useState(false); 
   
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -104,10 +104,10 @@ export default function CookingInterfaceScreen() {
     const instructions = rawInstructions
       .replace(/\r\n/g, '\n')
       .split(/\n+|(?<=\.)\s+(?=[A-Z])/)
-      .map(instruction => instruction.trim())
+      .map((instruction: string) => instruction.trim())
       .filter(Boolean);
 
-    return instructions.map((instruction, index) => {
+    return instructions.map((instruction: string, index: number) => {
       const timerMatch = instruction.match(/(\d+)\s*(minute|min|hour|hr|second|sec)/i);
       let timer = 0;
       if (timerMatch) {
@@ -185,7 +185,7 @@ export default function CookingInterfaceScreen() {
         console.log('Speech recognition started');
       };
       
-      recognition.onresult = (event) => {
+      recognition.onresult = (event: any) => {
         const command = event.results[0][0].transcript.toLowerCase().trim();
         console.log('Speech recognition result:', command);
         setRecognitionResult(command);
@@ -197,7 +197,7 @@ export default function CookingInterfaceScreen() {
         }
       };
       
-      recognition.onerror = (event) => {
+      recognition.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
         
         simulateVoiceRecognition();
@@ -259,6 +259,18 @@ export default function CookingInterfaceScreen() {
     }
   }, [voiceActivated, isVoiceEnabled, hasPermission, isRecognizing, speaking, lastCommandTime]);
 
+  const speakConfirmation = async (message: string) => {
+    try {
+      await Speech.speak(message, {
+        language: 'en',
+        pitch: 1.0,
+        rate: 0.8,
+      });
+    } catch (error) {
+      console.error('Confirmation speech error:', error);
+    }
+  };
+
   const processVoiceCommand = (command: string) => {
     const lowerCommand = command.toLowerCase().trim();
     console.log('Voice command received:', lowerCommand);
@@ -276,28 +288,37 @@ export default function CookingInterfaceScreen() {
     
     if (nextKeywords.some(keyword => lowerCommand.includes(keyword))) {
       goToNextStep();
+      speakConfirmation("Okay, going to next step");
     } else if (prevKeywords.some(keyword => lowerCommand.includes(keyword))) {
       goToPreviousStep();
+      speakConfirmation("Okay, going to previous step");
     } else if (pauseKeywords.some(keyword => lowerCommand.includes(keyword))) {
       togglePause();
+      speakConfirmation("Okay, pausing");
     } else if (resumeKeywords.some(keyword => lowerCommand.includes(keyword))) {
       togglePause();
+      speakConfirmation("Okay, resuming");
     } else if (timerStartKeywords.some(keyword => lowerCommand.includes(keyword))) {
       startTimer();
+      speakConfirmation("Okay, starting timer");
     } else if (timerStopKeywords.some(keyword => lowerCommand.includes(keyword))) {
       stopTimer();
+      speakConfirmation("Okay, stopping timer");
     } else if (repeatKeywords.some(keyword => lowerCommand.includes(keyword))) {
       speakInstruction(currentStepData?.instruction || '');
+      speakConfirmation("Okay, repeating instruction");
     } else if (completeKeywords.some(keyword => lowerCommand.includes(keyword))) {
       markStepComplete();
+      speakConfirmation("Okay, marking step as complete");
     } else if (voiceOffKeywords.some(keyword => lowerCommand.includes(keyword))) {
       setIsVoiceEnabled(false);
-      Alert.alert('Voice Commands Disabled', 'Say "voice on" to re-enable voice commands.');
+      speakConfirmation("Okay, voice commands disabled");
     } else if (voiceOnKeywords.some(keyword => lowerCommand.includes(keyword))) {
       setIsVoiceEnabled(true);
-      Alert.alert('Voice Commands Enabled', 'Voice commands are now active!');
+      speakConfirmation("Okay, voice commands enabled");
     } else {
       console.log('No command recognized for:', lowerCommand);
+      speakConfirmation("Sorry, I didn't understand that command");
     }
   };
 
@@ -326,6 +347,18 @@ export default function CookingInterfaceScreen() {
         duration: 300,
         useNativeDriver: false,
       }).start();
+      
+      if (voiceActivated && cookingSteps[currentStep + 1]) {
+        speakInstruction(cookingSteps[currentStep + 1].instruction);
+      }
+    } else {
+      const newCompletedSteps = new Set([...completedSteps, currentStep]);
+      if (newCompletedSteps.size === cookingSteps.length) {
+        stopVoiceRecognition();
+        setTimeout(() => {
+          navigation.navigate('RecipeCompletion', { meal });
+        }, 1000);
+      }
     }
   };
 
@@ -345,12 +378,32 @@ export default function CookingInterfaceScreen() {
         duration: 300,
         useNativeDriver: false,
       }).start();
+      
+      if (voiceActivated && cookingSteps[currentStep - 1]) {
+        speakInstruction(cookingSteps[currentStep - 1].instruction);
+      }
     }
+  };
+
+  const stopVoiceRecognition = () => {
+    setIsVoiceEnabled(false);
+    setVoiceActivated(false);
+    setIsListening(false);
+    setIsRecognizing(false);
+    setSpeaking(false);
   };
 
   const markStepComplete = () => {
     setCompletedSteps(prev => new Set([...prev, currentStep]));
-    if (currentStep < cookingSteps.length - 1) {
+    speakConfirmation("Step marked as complete");
+    
+    const newCompletedSteps = new Set([...completedSteps, currentStep]);
+    if (newCompletedSteps.size === cookingSteps.length) {
+      stopVoiceRecognition();
+      setTimeout(() => {
+        navigation.navigate('RecipeCompletion', { meal });
+      }, 1000); 
+    } else if (currentStep < cookingSteps.length - 1) {
       goToNextStep();
     }
   };
@@ -393,15 +446,9 @@ export default function CookingInterfaceScreen() {
         setTimeRemaining(prev => {
           if (prev <= 1) {
             Vibration.vibrate([0, 500, 200, 500]);
-            Alert.alert(
-              'Timer Complete!', 
-              'Time\'s up for this step!',
-              [
-                { text: 'Continue', onPress: () => goToNextStep() },
-                { text: 'Stay Here', style: 'cancel' }
-              ]
-            );
             stopTimer();
+            speakConfirmation("Timer complete! Moving to next step");
+            goToNextStep();
             return 0;
           }
           return prev - 1;
@@ -503,8 +550,17 @@ export default function CookingInterfaceScreen() {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      stopVoiceRecognition();
     };
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      return () => {
+        stopVoiceRecognition();
+      };
+    }, [])
+  );
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -537,7 +593,13 @@ export default function CookingInterfaceScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+        <TouchableOpacity 
+          onPress={() => {
+            stopVoiceRecognition();
+            navigation.goBack();
+          }} 
+          style={styles.headerButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>

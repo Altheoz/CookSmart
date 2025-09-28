@@ -30,6 +30,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="MealDetail" options={{ headerShown: false }} />
           <Stack.Screen name="CookingInterface" options={{ headerShown: false }} />
+          <Stack.Screen name="RecipeCompletion" options={{ headerShown: false }} />
           <Stack.Screen name="CategoryMeals" options={{ headerShown: false }} />
           
           <Stack.Screen name="+not-found" />
