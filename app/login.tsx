@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { auth } from '../FirebaseConfig';
+import { UserService } from '../services/userService';
 import './global.css';
 
 const Login = () => {
@@ -29,9 +30,19 @@ const Login = () => {
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        router.replace('/(tabs)/home');
+        try {
+          const userData = await UserService.getUserData(user.uid);
+          if (userData?.role === 'admin') {
+            router.replace('/admin-dashboard');
+          } else {
+            router.replace('/(tabs)/home');
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          router.replace('/(tabs)/home');
+        }
       }
     });
 
@@ -163,7 +174,19 @@ const Login = () => {
           await AsyncStorage.removeItem('rememberedPassword');
           await AsyncStorage.removeItem('rememberMe');
         }
-        router.replace('/(tabs)/home');
+        
+        
+        try {
+          const userData = await UserService.getUserData(userCredential.user.uid);
+          if (userData?.role === 'admin') {
+            router.replace('/admin-dashboard');
+          } else {
+            router.replace('/(tabs)/home');
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          router.replace('/(tabs)/home');
+        }
       }
     } catch (error: any) {
       console.log(error);

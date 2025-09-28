@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import {
-  deleteUser,
   EmailAuthProvider,
   getAuth,
   reauthenticateWithCredential,
@@ -23,6 +22,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { UserService } from '../../services/userService';
 
 export default function ProfileContent() {
   const auth = getAuth();
@@ -86,7 +86,7 @@ export default function ProfileContent() {
       return;
     }
 
-    // Always confirm current password before updating
+   
     setShowReauthModal(true);
   };
 
@@ -106,16 +106,39 @@ export default function ProfileContent() {
       return;
     }
 
+    if (!user?.uid) {
+      Alert.alert('Error', 'User not found. Please try signing in again.');
+      return;
+    }
+
     try {
       setIsDeleting(true);
-      const credential = EmailAuthProvider.credential(user?.email || '', deletePassword);
-      await reauthenticateWithCredential(user!, credential);
-      await deleteUser(user!);
+      
+     
+      const credential = EmailAuthProvider.credential(user.email || '', deletePassword);
+      await reauthenticateWithCredential(user, credential);
+      
+    
+      await UserService.deleteUser(user.uid);
+      
+      
+      await AsyncStorage.removeItem('userAvatar');
+      
       setShowDeleteModal(false);
-      Alert.alert('Account Deleted', 'Your account has been deleted.');
-      router.replace('/');
+      Alert.alert(
+        'Account Deleted', 
+        'Your account and all associated data have been permanently deleted.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/')
+          }
+        ]
+      );
     } catch (error: any) {
+      console.error('Account deletion error:', error);
       const code: string = error?.code || '';
+      
       if (
         code.includes('wrong-password') ||
         code.includes('invalid-credential') ||
@@ -123,8 +146,16 @@ export default function ProfileContent() {
       ) {
         setDeletePasswordError(true);
         setTimeout(() => setDeletePasswordError(false), 2000);
+      } else if (code.includes('requires-recent-login')) {
+        Alert.alert(
+          'Re-authentication Required',
+          'For security reasons, please sign out and sign back in before deleting your account.'
+        );
       } else {
-        Alert.alert('Error', error.message);
+        Alert.alert(
+          'Deletion Failed', 
+          error.message || 'Failed to delete account. Please try again or contact support.'
+        );
       }
     } finally {
       setIsDeleting(false);
