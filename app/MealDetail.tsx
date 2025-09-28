@@ -20,21 +20,12 @@ export default function MealDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { meal } = route.params;
-  const { addToFavorites, addToSaved, isFavorite, isSaved, removeFromSaved } = useRecipeContext();
+  const { addToSaved, isSaved, removeFromSaved } = useRecipeContext();
   const [searchQuery, setSearchQuery] = useState('');
 
   const ingredients = React.useMemo(() => mealApiService.extractIngredients(meal), [meal.idMeal]);
   const cookingTime = React.useMemo(() => mealApiService.getEstimatedCookingTime(meal), [meal.idMeal, meal.strInstructions]);
   const difficulty = React.useMemo(() => mealApiService.getDifficultyLevel(meal), [meal.idMeal, meal.strInstructions]);
-
-  const handleAddToFavorites = async () => {
-    if (isFavorite(meal.idMeal)) {
-      Alert.alert('Already in Favorites', 'This recipe is already in your favorites.');
-    } else {
-      await addToFavorites(meal);
-      Alert.alert('Added to Favorites', 'Recipe has been added to your favorites.');
-    }
-  };
 
   const handleToggleSaved = async () => {
     if (isSaved(meal.idMeal)) {
@@ -47,78 +38,73 @@ export default function MealDetailScreen() {
   };
 
   const rawInstructions = typeof meal?.strInstructions === 'string' ? meal.strInstructions : '';
-  const instructions = rawInstructions
+  const instructions: string[] = rawInstructions
     .replace(/\r\n/g, '\n')
     .split(/\n+|(?<=\.)\s+(?=[A-Z])/)
-    .map(instruction => instruction.trim())
-    .filter(Boolean);
+    .map((instruction: string) => instruction.trim())
+    .filter((text: string) => Boolean(text));
+
+  const filteredInstructions = React.useMemo(() => {
+    if (!searchQuery.trim()) return instructions;
+    const q = searchQuery.trim().toLowerCase();
+    return instructions.filter((step: string) => step.toLowerCase().includes(q));
+  }, [instructions, searchQuery]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Image
-          source={require('@/assets/images/imgg.png')}
-          style={styles.logo}
-        />
-        <View style={{ width: 24 }} />
-      </View>
-
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Image source={{ uri: meal.strMealThumb }} style={styles.recipeImage} />
+        <View style={styles.heroContainer}>
+          <Image source={{ uri: meal.strMealThumb }} style={styles.recipeImage} />
+          <View style={styles.imageOverlay} />
 
-        <View style={styles.titleContainer}>
-          <Text style={styles.recipeTitle}>{meal.strMeal}</Text>
-          <View style={styles.recipeInfo}>
-            <View style={styles.infoItem}>
-              <Ionicons name="time-outline" size={16} color="#666" />
-              <Text style={styles.infoText}>{cookingTime} min</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Ionicons name="people-outline" size={16} color="#666" />
-              <Text style={styles.infoText}>4 servings</Text>
-            </View>
-            <View style={styles.infoItem}>
+          <View style={styles.topControls}>
+            <TouchableOpacity style={styles.overlayButton} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.overlayButton, isSaved(meal.idMeal) && styles.overlayButtonActive]}
+              onPress={handleToggleSaved}
+            >
+              <Ionicons name={isSaved(meal.idMeal) ? 'bookmark' : 'bookmark-outline'} size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.heroTextContainer}>
+            <Text style={styles.heroTitle}>{meal.strMeal}</Text>
+            <View style={styles.metaChipsRow}>
+              <View style={styles.chip}>
+                <Ionicons name="time-outline" size={14} color="#111" />
+                <Text style={styles.chipText}>{cookingTime} min</Text>
+              </View>
+              <View style={styles.chip}>
+                <Ionicons name="people-outline" size={14} color="#111" />
+                <Text style={styles.chipText}>4 servings</Text>
+              </View>
               {(() => {
                 const difficultyColors = {
-                  Easy: '#4CAF50',
-                  Medium: '#FF9800',
-                  Hard: '#F44336'
-                };
-                const color = difficultyColors[difficulty];
-                
+                  Easy: { bg: '#E8F5E8', text: '#2E7D32', border: '#4CAF50' },
+                  Medium: { bg: '#FFF3E0', text: '#F57C00', border: '#FF9800' },
+                  Hard: { bg: '#FFEBEE', text: '#C62828', border: '#F44336' },
+                } as const;
+                const colors = difficultyColors[difficulty];
                 return (
-                  <>
-                    <Ionicons name="trending-up-outline" size={16} color={color} />
-                    <Text style={[styles.infoText, { color }]}>{difficulty}</Text>
-                  </>
+                  <View style={[styles.chip, { backgroundColor: colors.bg, borderColor: colors.border }] }>
+                    <Ionicons name="trending-up-outline" size={14} color={colors.text} />
+                    <Text style={[styles.chipText, { color: colors.text }]}>{difficulty}</Text>
+                  </View>
                 );
               })()}
             </View>
           </View>
         </View>
 
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={[styles.iconPill, isSaved(meal.idMeal) && styles.iconPillActive]} onPress={handleToggleSaved}>
-            <Ionicons name={isSaved(meal.idMeal) ? "bookmark" : "bookmark-outline"} size={22} color={isSaved(meal.idMeal) ? 'white' : '#111'} />
-          </TouchableOpacity>
-
+        <View style={styles.actionButtonsCentered}>
           <TouchableOpacity 
             style={styles.startCookingButton}
             onPress={() => navigation.navigate('CookingInterface', { meal })}
           >
             <Ionicons name="play" size={20} color="white" />
             <Text style={styles.startCookingText}>Start cooking now</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.iconPill} onPress={handleAddToFavorites}>
-            <Ionicons 
-              name={isFavorite(meal.idMeal) ? "heart" : "heart-outline"} 
-              size={22} 
-              color={isFavorite(meal.idMeal) ? "#ff6b6b" : "#111"} 
-            />
           </TouchableOpacity>
         </View>
 
@@ -164,16 +150,16 @@ export default function MealDetailScreen() {
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-            <TouchableOpacity style={styles.applyButton}>
-              <Text style={styles.applyButtonText}>Apply</Text>
+            <TouchableOpacity style={styles.applyButton} onPress={() => {}}>
+              <Text style={styles.applyButtonText}>Search</Text>
             </TouchableOpacity>
           </View>
 
           <Text style={styles.sectionTitle}>Instructions</Text>
-          {instructions.length === 0 ? (
+          {filteredInstructions.length === 0 ? (
             <Text style={styles.instructionText}>No instructions available.</Text>
           ) : (
-            instructions.map((instruction, index) => (
+            filteredInstructions.map((instruction: string, index: number) => (
               <View key={index} style={styles.instructionItem}>
                 <View style={styles.stepNumber}>
                   <Text style={styles.stepNumberText}>{index + 1}</Text>
@@ -190,25 +176,77 @@ export default function MealDetailScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    paddingTop: 30,
     flex: 1,
-    backgroundColor: '#FFE5D4',
+    backgroundColor: '#FFF7F2',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  heroContainer: {
+    position: 'relative',
   },
   recipeImage: {
     width: '100%',
-    height: 250,
+    height: 300,
     resizeMode: 'cover',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  topControls: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  overlayButton: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  overlayButtonActive: {
+    backgroundColor: 'rgba(255,107,53,0.65)',
+  },
+  heroTextContainer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
+  },
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 10,
+  },
+  metaChipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'white',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  chipText: {
+    fontSize: 12,
+    color: '#111',
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   titleContainer: {
     paddingHorizontal: 20,
@@ -233,11 +271,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  actionButtons: {
+  actionButtonsCentered: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    marginTop: 16,
     marginBottom: 20,
   },
   iconPill: {
@@ -258,7 +297,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B35',
     borderRadius: 8,
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: "25%",
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -268,16 +307,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  favoriteButton: {
-    alignItems: 'center',
-  },
   ingredientsSection: {
     flexDirection: 'row',
-    backgroundColor: '#4ecdc4',
+    backgroundColor: 'white',
     marginHorizontal: 16,
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   ingredientsColumn: {
     flex: 1,
@@ -285,15 +328,15 @@ const styles = StyleSheet.create({
   },
   nutritionColumn: {
     flex: 1,
-    paddingLeft: 8,
-    borderLeftWidth: 2,
-    borderLeftColor: '#ff6b6b',
-    paddingLeft: 16,
+    paddingLeft: 20,
+    borderLeftWidth: 1,
+    borderLeftColor: '#eee',
+
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#111',
     marginBottom: 12,
   },
   ingredientItem: {
@@ -304,13 +347,13 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 16,
     height: 16,
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 2,
+    borderWidth: 0,
+    backgroundColor: '#FF6B35',
+    borderRadius: 8,
     marginRight: 8,
   },
   ingredientText: {
-    color: 'white',
+    color: '#333',
     fontSize: 14,
     flex: 1,
   },
@@ -318,12 +361,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   nutritionLabel: {
-    color: 'white',
+    color: '#555',
     fontSize: 12,
     fontWeight: '500',
   },
   nutritionValue: {
-    color: 'white',
+    color: '#111',
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -338,6 +381,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
   searchInput: {
     flex: 1,
@@ -345,7 +390,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   applyButton: {
-    backgroundColor: '#4ecdc4',
+    backgroundColor: '#FF6B35',
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 12,

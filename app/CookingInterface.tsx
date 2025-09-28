@@ -3,18 +3,18 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import * as Speech from 'expo-speech';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Dimensions,
-  PermissionsAndroid,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Vibration,
-  View
+    Alert,
+    Animated,
+    Dimensions,
+    PermissionsAndroid,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    Vibration,
+    View
 } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -606,12 +606,7 @@ export default function CookingInterfaceScreen() {
           <Ionicons name="restaurant" size={24} color="#4CAF50" />
           <Text style={styles.headerTitle}>Cooking Mode</Text>
         </View>
-        <TouchableOpacity 
-          onPress={() => setShowStepOverview(!showStepOverview)} 
-          style={styles.headerButton}
-        >
-          <Ionicons name="list" size={24} color="#333" />
-        </TouchableOpacity>
+        <View style={styles.headerRightPlaceholder} />
       </View>
 
       <View style={styles.progressContainer}>
@@ -807,6 +802,7 @@ export default function CookingInterfaceScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    paddingTop: 30,
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
@@ -840,6 +836,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#2C3E50',
+  },
+  headerRightPlaceholder: {
+    width: 40,
+    height: 40,
   },
   progressContainer: {
     backgroundColor: 'white',
