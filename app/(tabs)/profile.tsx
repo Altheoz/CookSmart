@@ -3,24 +3,25 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import {
-  EmailAuthProvider,
-  getAuth,
-  reauthenticateWithCredential,
-  signOut,
-  updatePassword,
+    EmailAuthProvider,
+    getAuth,
+    reauthenticateWithCredential,
+    signOut,
+    updatePassword,
 } from 'firebase/auth';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Image,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { UserService } from '../../services/userService';
 
@@ -41,6 +42,26 @@ export default function ProfileContent() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const slideAnim = useState(new Animated.Value(50))[0];
+
+  useEffect(() => {
+  
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const passwordMismatch = useMemo(() => {
     return newPassword.length > 0 && confirmPassword.length > 0 && newPassword !== confirmPassword;
@@ -136,7 +157,6 @@ export default function ProfileContent() {
         ]
       );
     } catch (error: any) {
-      console.error('Account deletion error:', error);
       const code: string = error?.code || '';
       
       if (
@@ -152,6 +172,7 @@ export default function ProfileContent() {
           'For security reasons, please sign out and sign back in before deleting your account.'
         );
       } else {
+        console.error('Account deletion error:', error);
         Alert.alert(
           'Deletion Failed', 
           error.message || 'Failed to delete account. Please try again or contact support.'
@@ -189,6 +210,7 @@ export default function ProfileContent() {
         setReauthPasswordError(true);
         setTimeout(() => setReauthPasswordError(false), 2000);
       } else {
+        console.error('Re-authentication error:', error);
         Alert.alert('Error', error.message || 'Re-authentication failed.');
       }
     } finally {
@@ -198,41 +220,93 @@ export default function ProfileContent() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FFE5D4]">
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        <View className="flex flex-row items-center px-4 pt-4">
-          <TouchableOpacity onPress={() => router.push('/')}>
-            <Ionicons name="arrow-back" size={24} color="black" />
-          </TouchableOpacity>
-          <View className="flex-1 items-center">
-            <Text className="text-xl font-semibold">Profile</Text>
-          </View>
-          <View className="w-6" />
-        </View>
-
-        <View className="flex items-center mt-6 px-6">
-          <View className="relative">
-            <TouchableOpacity onPress={() => setShowPicker(true)} activeOpacity={0.8}>
-              <Image source={avatar} className="w-28 h-28 rounded-full bg-white border-2 border-gray-300" />
-              <View className="absolute bottom-0 right-0 bg-blue-600 rounded-full p-2 shadow">
-                <Ionicons name="create" size={16} color="white" />
-              </View>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      
+      <View className="bg-orange-500"  style={{
+            borderBottomEndRadius: 60,
+            borderBottomStartRadius: 60,
+          }}>
+        <View
+          style={{
+            backgroundColor: '#FF8A65',
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: 32,
+            borderBottomEndRadius: 30,
+            borderBottomStartRadius: 30,
+          }}
+        >
+          <View className="flex-row items-center justify-between mb-6">
+            <TouchableOpacity 
+              onPress={() => router.push('/')}
+              className="bg-white/20 rounded-full p-2 backdrop-blur-sm"
+            >
+              <Ionicons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
+            <Text className="text-white text-xl font-bold">Profile</Text>
+            <View className="w-10" />
           </View>
 
-          <Text className="text-lg font-semibold mt-4">Welcome, User!</Text>
-          <Text className="text-sm text-gray-600 mt-1 text-center">
-            Manage your profile picture, password or sign out below.
-          </Text>
-          <Text className="text-md font-medium mt-3 text-center text-green-700">
-            {user?.email}
-          </Text>
-          <Text className="text-xs text-gray-500 mt-2">Tap your avatar to change it</Text>
-        </View>
+       
+          <View className="items-center">
+            <View className="relative mb-4">
+              <TouchableOpacity 
+                onPress={() => setShowPicker(true)} 
+                activeOpacity={0.8}
+                style={{
+                  transform: [{ scale: 1 }],
+                }}
+              >
+                <View className="w-32 h-32 rounded-full bg-white/20 backdrop-blur-sm border-4 border-white/30 shadow-2xl">
+                  <Image 
+                    source={avatar} 
+                    className="w-full h-full rounded-full" 
+                    resizeMode="cover"
+                  />
+                </View>
+                <View className="absolute bottom-1 right-2 bg-white rounded-full p-2 shadow-lg">
+                  <Ionicons name="pencil" size={20} color="#FF6B9D" />
+                </View>
+              </TouchableOpacity>
+            </View>
 
-        <View className="mt-6 px-6">
-          <Text className="text-base font-semibold mb-2">Change Password</Text>
-          <Text className="text-xs text-gray-600 mb-4">Use at least 8 characters. Avoid using your old password.</Text>
+            <Text className="text-white text-2xl font-bold mb-2">Welcome Back!</Text>
+            <Text className="text-white/90 text-base text-center mb-3">
+              Manage your account settings and preferences
+            </Text>
+            <View className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+              <Text className="text-white font-medium text-sm">
+                {user?.email}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <ScrollView 
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+      >
+      
+        <Animated.View 
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }}
+          className="mx-6 mt-6 bg-white rounded-2xl shadow-lg p-6"
+        >
+          <View className="flex-row items-center mb-4">
+            <View className="bg-blue-100 rounded-full p-3 mr-3">
+              <Ionicons name="lock-closed" size={24} color="#3B82F6" />
+            </View>
+            <View>
+              <Text className="text-lg font-bold text-gray-800">Security Settings</Text>
+              <Text className="text-sm text-gray-500">Manage your password and security</Text>
+            </View>
+          </View>
+
+          <Text className="text-sm text-gray-600 mb-4">Use at least 8 characters. Avoid using your old password.</Text>
 
           {[
             {
@@ -242,6 +316,7 @@ export default function ProfileContent() {
               show: showNew,
               toggle: () => setShowNew(!showNew),
               key: 'new',
+              icon: 'key',
             },
             {
               placeholder: 'Confirm New Password',
@@ -250,34 +325,66 @@ export default function ProfileContent() {
               show: showConfirm,
               toggle: () => setShowConfirm(!showConfirm),
               key: 'confirm',
+              icon: 'checkmark-circle',
             },
           ].map((field) => (
-            <View key={field.key} className="relative mb-4">
-              <Text className="text-xs text-gray-700 mb-1">{field.placeholder}</Text>
-              <TextInput
-                placeholder={field.placeholder}
-                secureTextEntry={!field.show}
-                value={field.value}
-                onChangeText={field.setter}
-                className="border border-gray-300 rounded-md p-3 pr-10 bg-white"
-              />
-              <TouchableOpacity className="absolute right-3 top-8" onPress={field.toggle}>
-                <Ionicons name={field.show ? 'eye' : 'eye-off'} size={22} color="#888" />
-              </TouchableOpacity>
+            <View key={field.key} className="mb-4">
+              <View className="flex-row items-center mb-2">
+                <Ionicons name={field.icon as any} size={16} color="#6B7280" />
+                <Text className="text-sm text-gray-700 ml-2 font-medium">{field.placeholder}</Text>
+              </View>
+              <View className="relative">
+                <TextInput
+                  placeholder={field.placeholder}
+                  secureTextEntry={!field.show}
+                  value={field.value}
+                  onChangeText={field.setter}
+                  className="bg-gray-50 border border-gray-200 rounded-xl p-4 pr-12 text-gray-800"
+                  placeholderTextColor="#9CA3AF"
+                />
+                <TouchableOpacity 
+                  className="absolute right-4 top-4" 
+                  onPress={field.toggle}
+                >
+                  <Ionicons 
+                    name={field.show ? 'eye' : 'eye-off'} 
+                    size={20} 
+                    color="#6B7280" 
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
 
           {passwordMismatch && (
-            <Text className="text-xs text-red-600 mb-2">New passwords do not match.</Text>
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="alert-circle" size={16} color="#EF4444" />
+              <Text className="text-sm text-red-600 ml-2">New passwords do not match.</Text>
+            </View>
           )}
           {isWeakPassword && !passwordMismatch && (
-            <Text className="text-xs text-amber-700 mb-2">Password seems weak. Try 8+ characters.</Text>
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="warning" size={16} color="#F59E0B" />
+              <Text className="text-sm text-amber-600 ml-2">Password seems weak. Try 8+ characters.</Text>
+            </View>
           )}
 
           <TouchableOpacity
             onPress={handleUpdatePassword}
             disabled={isUpdatingPassword || !newPassword || !confirmPassword || passwordMismatch || isWeakPassword}
-            className={`bg-blue-600 rounded-md py-3 mb-4 ${isUpdatingPassword || !newPassword || !confirmPassword || passwordMismatch || isWeakPassword ? 'opacity-60' : ''}`}
+            style={{
+              backgroundColor: isUpdatingPassword || !newPassword || !confirmPassword || passwordMismatch || isWeakPassword 
+                ? '#9CA3AF' 
+                : '#3B82F6',
+              borderRadius: 12,
+              paddingVertical: 16,
+              marginBottom: 16,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 3,
+            }}
           >
             {isUpdatingPassword ? (
               <View className="flex-row justify-center items-center">
@@ -285,28 +392,94 @@ export default function ProfileContent() {
                 <Text className="text-white text-center font-semibold ml-2">Updating...</Text>
               </View>
             ) : (
-              <Text className="text-white text-center font-semibold">Update Password</Text>
+              <Text className="text-white text-center font-semibold text-lg">Update Password</Text>
             )}
           </TouchableOpacity>
+        </Animated.View>
 
-          <TouchableOpacity onPress={handleSignOut} disabled={isSigningOut} className={`bg-red-500 rounded-md py-3 mb-6 ${isSigningOut ? 'opacity-60' : ''}`}>
+     
+        <Animated.View 
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }}
+          className="mx-6 mt-4 bg-white rounded-2xl shadow-lg p-6"
+        >
+          <View className="flex-row items-center mb-4">
+            <View className="bg-orange-100 rounded-full p-3 mr-3">
+              <Ionicons name="log-out" size={24} color="#F97316" />
+            </View>
+            <View>
+              <Text className="text-lg font-bold text-gray-800">Account Actions</Text>
+              <Text className="text-sm text-gray-500">Sign out or manage your account</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            onPress={handleSignOut} 
+            disabled={isSigningOut} 
+            style={{
+              backgroundColor: isSigningOut ? '#9CA3AF' : '#F97316',
+              borderRadius: 12,
+              paddingVertical: 16,
+              marginBottom: 24,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 3,
+            }}
+          >
             {isSigningOut ? (
               <View className="flex-row justify-center items-center">
                 <ActivityIndicator color="#fff" />
                 <Text className="text-white text-center font-semibold ml-2">Signing Out...</Text>
               </View>
             ) : (
-              <Text className="text-white text-center font-semibold">Sign Out</Text>
+              <Text className="text-white text-center font-semibold text-lg">Sign Out</Text>
             )}
           </TouchableOpacity>
+        </Animated.View>
 
-          <View className="bg-red-50 p-4 rounded-lg border border-red-200">
-            <Text className="text-red-700 font-bold mb-2">Danger Zone</Text>
+       
+        <Animated.View 
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }}
+          className="mx-6 mt-4 bg-white rounded-2xl shadow-lg p-6 border border-red-100"
+        >
+          <View className="flex-row items-center mb-4">
+            <View className="bg-red-100 rounded-full p-3 mr-3">
+              <Ionicons name="warning" size={24} color="#EF4444" />
+            </View>
+            <View>
+              <Text className="text-lg font-bold text-red-700">Danger Zone</Text>
+              <Text className="text-sm text-red-500">Permanent actions that cannot be undone</Text>
+            </View>
+          </View>
+
+          <View className="bg-red-50 rounded-xl p-4 border border-red-200">
             <View className="flex-row items-start">
-              <Ionicons name="warning" size={22} color="#b91c1c" />
+              <Ionicons name="alert-circle" size={20} color="#DC2626" />
               <View className="ml-3 flex-1">
-                <Text className="text-sm text-red-700 mb-2">Deleting your account is permanent and cannot be undone.</Text>
-                <TouchableOpacity onPress={() => setShowDeleteModal(true)} disabled={isDeleting} className={`bg-red-600 rounded-md py-2 ${isDeleting ? 'opacity-60' : ''}`}>
+                <Text className="text-sm text-red-700 mb-3 font-medium">
+                  Deleting your account is permanent and cannot be undone. All your data will be lost.
+                </Text>
+                <TouchableOpacity 
+                  onPress={() => setShowDeleteModal(true)} 
+                  disabled={isDeleting} 
+                  style={{
+                    backgroundColor: isDeleting ? '#9CA3AF' : '#DC2626',
+                    borderRadius: 12,
+                    paddingVertical: 12,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 3,
+                  }}
+                >
                   {isDeleting ? (
                     <View className="flex-row justify-center items-center">
                       <ActivityIndicator color="#fff" />
@@ -319,7 +492,7 @@ export default function ProfileContent() {
               </View>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
 
       <AvatarPickerModal
@@ -329,80 +502,184 @@ export default function ProfileContent() {
       />
 
       <Modal visible={showDeleteModal} transparent animationType="fade">
-        <View className="flex-1 justify-center items-center bg-black/50 px-6">
-          <View className="bg-white p-5 rounded-xl w-full">
-            <Text className="text-lg font-semibold text-center mb-1 text-red-700">Confirm Delete</Text>
-            <Text className="text-sm text-gray-600 text-center mb-4">Enter your current password to continue.</Text>
-            <Text className="text-xs text-gray-700 mb-1">Current Password</Text>
-            {deletePasswordError && (
-              <Text className="text-xs text-red-600 mb-1">Wrong password</Text>
-            )}
-            <View className="relative mb-4">
-              <TextInput
-                placeholder="Current Password"
-                secureTextEntry={!showDeletePassword}
-                value={deletePassword}
-                onChangeText={(t) => { setDeletePassword(t); if (deletePasswordError) setDeletePasswordError(false); }}
-                className={`border ${deletePasswordError ? 'border-red-500' : 'border-gray-300'} rounded-md p-3 pr-10 bg-white`}
-              />
-              <TouchableOpacity className="absolute right-3 top-3" onPress={() => setShowDeletePassword((v) => !v)}>
-                <Ionicons name={showDeletePassword ? 'eye' : 'eye-off'} size={22} color="#888" />
-              </TouchableOpacity>
-            </View>
-            <View className="flex-row gap-3">
-              <TouchableOpacity onPress={() => { setShowDeleteModal(false); setDeletePassword(''); setShowDeletePassword(false); }} className="flex-1 bg-gray-200 rounded-md py-3">
-                <Text className="text-center font-semibold text-gray-900">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleDeleteAccount} disabled={isDeleting || !deletePassword} className={`flex-1 bg-red-600 rounded-md py-3 ${isDeleting || !deletePassword ? 'opacity-60' : ''}`}>
-                {isDeleting ? (
-                  <View className="flex-row justify-center items-center">
-                    <ActivityIndicator color="#fff" />
-                    <Text className="text-white text-center font-semibold ml-2">Deleting...</Text>
+        <View className="flex-1 justify-center items-center bg-black/60 px-6">
+          <View className="bg-white rounded-3xl w-full max-w-sm shadow-2xl">
+            <View className="p-6">
+              <View className="items-center mb-4">
+                <View className="bg-red-100 rounded-full p-4 mb-3">
+                  <Ionicons name="warning" size={32} color="#EF4444" />
+                </View>
+                <Text className="text-xl font-bold text-gray-800 mb-2">Confirm Account Deletion</Text>
+                <Text className="text-sm text-gray-600 text-center">
+                  Enter your current password to permanently delete your account. This action cannot be undone.
+                </Text>
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-sm text-gray-700 mb-2 font-medium">Current Password</Text>
+                {deletePasswordError && (
+                  <View className="flex-row items-center mb-2">
+                    <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                    <Text className="text-sm text-red-600 ml-2">Incorrect password</Text>
                   </View>
-                ) : (
-                  <Text className="text-white text-center font-semibold">Delete</Text>
                 )}
-              </TouchableOpacity>
+                <View className="relative">
+                  <TextInput
+                    placeholder="Enter your password"
+                    secureTextEntry={!showDeletePassword}
+                    value={deletePassword}
+                    onChangeText={(t) => { setDeletePassword(t); if (deletePasswordError) setDeletePasswordError(false); }}
+                    className={`bg-gray-50 border ${
+                      deletePasswordError ? 'border-red-500' : 'border-gray-200'
+                    } rounded-xl p-4 pr-12 text-gray-800`}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  <TouchableOpacity 
+                    className="absolute right-4 top-4" 
+                    onPress={() => setShowDeletePassword((v) => !v)}
+                  >
+                    <Ionicons 
+                      name={showDeletePassword ? 'eye' : 'eye-off'} 
+                      size={20} 
+                      color="#6B7280" 
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View className="flex-row gap-3">
+                <TouchableOpacity 
+                  onPress={() => { 
+                    setShowDeleteModal(false); 
+                    setDeletePassword(''); 
+                    setShowDeletePassword(false); 
+                  }} 
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#F3F4F6',
+                    borderRadius: 12,
+                    paddingVertical: 16,
+                  }}
+                >
+                  <Text className="text-center font-semibold text-gray-700">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={handleDeleteAccount} 
+                  disabled={isDeleting || !deletePassword} 
+                  style={{
+                    flex: 1,
+                    backgroundColor: isDeleting || !deletePassword ? '#9CA3AF' : '#DC2626',
+                    borderRadius: 12,
+                    paddingVertical: 16,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 3,
+                  }}
+                >
+                  {isDeleting ? (
+                    <View className="flex-row justify-center items-center">
+                      <ActivityIndicator color="#fff" />
+                      <Text className="text-white text-center font-semibold ml-2">Deleting...</Text>
+                    </View>
+                  ) : (
+                    <Text className="text-white text-center font-semibold">Delete</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
       </Modal>
 
       <Modal visible={showReauthModal} transparent animationType="fade">
-        <View className="flex-1 justify-center items-center bg-black/50 px-6">
-          <View className="bg-white p-5 rounded-xl w-full">
-            <Text className="text-lg font-semibold text-center mb-1">Re-authenticate</Text>
-            <Text className="text-sm text-gray-600 text-center mb-4">Enter your current password to proceed.</Text>
-            <Text className="text-xs text-gray-700 mb-1">Current Password</Text>
-            {reauthPasswordError && (
-              <Text className="text-xs text-red-600 mb-1">Wrong password</Text>
-            )}
-            <View className="relative mb-4">
-              <TextInput
-                placeholder="Current Password"
-                secureTextEntry={!showReauthPassword}
-                value={reauthPassword}
-                onChangeText={(t) => { setReauthPassword(t); if (reauthPasswordError) setReauthPasswordError(false); }}
-                className={`border ${reauthPasswordError ? 'border-red-500' : 'border-gray-300'} rounded-md p-3 pr-10 bg-white`}
-              />
-              <TouchableOpacity className="absolute right-3 top-3" onPress={() => setShowReauthPassword((v) => !v)}>
-                <Ionicons name={showReauthPassword ? 'eye' : 'eye-off'} size={22} color="#888" />
-              </TouchableOpacity>
-            </View>
-            <View className="flex-row gap-3">
-              <TouchableOpacity onPress={() => { setShowReauthModal(false); setReauthPassword(''); setShowReauthPassword(false); }} className="flex-1 bg-gray-200 rounded-md py-3">
-                <Text className="text-center font-semibold text-gray-900">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleReauthAndUpdate} disabled={isReauthing || !reauthPassword} className={`flex-1 bg-blue-600 rounded-md py-3 ${isReauthing || !reauthPassword ? 'opacity-60' : ''}`}>
-                {isReauthing ? (
-                  <View className="flex-row justify-center items-center">
-                    <ActivityIndicator color="#fff" />
-                    <Text className="text-white text-center font-semibold ml-2">Updating...</Text>
+        <View className="flex-1 justify-center items-center bg-black/60 px-6">
+          <View className="bg-white rounded-3xl w-full max-w-sm shadow-2xl">
+            <View className="p-6">
+              <View className="items-center mb-4">
+                <View className="bg-blue-100 rounded-full p-4 mb-3">
+                  <Ionicons name="shield-checkmark" size={32} color="#3B82F6" />
+                </View>
+                <Text className="text-xl font-bold text-gray-800 mb-2">Security Verification</Text>
+                <Text className="text-sm text-gray-600 text-center">
+                  Enter your current password to proceed with the password update.
+                </Text>
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-sm text-gray-700 mb-2 font-medium">Current Password</Text>
+                {reauthPasswordError && (
+                  <View className="flex-row items-center mb-2">
+                    <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                    <Text className="text-sm text-red-600 ml-2">Incorrect password</Text>
                   </View>
-                ) : (
-                  <Text className="text-white text-center font-semibold">Continue</Text>
                 )}
-              </TouchableOpacity>
+                <View className="relative">
+                  <TextInput
+                    placeholder="Enter your password"
+                    secureTextEntry={!showReauthPassword}
+                    value={reauthPassword}
+                    onChangeText={(t) => { setReauthPassword(t); if (reauthPasswordError) setReauthPasswordError(false); }}
+                    className={`bg-gray-50 border ${
+                      reauthPasswordError ? 'border-red-500' : 'border-gray-200'
+                    } rounded-xl p-4 pr-12 text-gray-800`}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  <TouchableOpacity 
+                    className="absolute right-4 top-4" 
+                    onPress={() => setShowReauthPassword((v) => !v)}
+                  >
+                    <Ionicons 
+                      name={showReauthPassword ? 'eye' : 'eye-off'} 
+                      size={20} 
+                      color="#6B7280" 
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View className="flex-row gap-3">
+                <TouchableOpacity 
+                  onPress={() => { 
+                    setShowReauthModal(false); 
+                    setReauthPassword(''); 
+                    setShowReauthPassword(false); 
+                  }} 
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#F3F4F6',
+                    borderRadius: 12,
+                    paddingVertical: 16,
+                  }}
+                >
+                  <Text className="text-center font-semibold text-gray-700">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={handleReauthAndUpdate} 
+                  disabled={isReauthing || !reauthPassword} 
+                  style={{
+                    flex: 1,
+                    backgroundColor: isReauthing || !reauthPassword ? '#9CA3AF' : '#3B82F6',
+                    borderRadius: 12,
+                    paddingVertical: 16,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 3,
+                  }}
+                >
+                  {isReauthing ? (
+                    <View className="flex-row justify-center items-center">
+                      <ActivityIndicator color="#fff" />
+                      <Text className="text-white text-center font-semibold ml-2">Updating...</Text>
+                    </View>
+                  ) : (
+                    <Text className="text-white text-center font-semibold">Continue</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
