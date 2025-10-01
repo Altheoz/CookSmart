@@ -34,6 +34,7 @@ export default function RootLayout() {
           <Stack.Screen name="CategoryMeals" options={{ headerShown: false }} />
           <Stack.Screen name="admin-dashboard" options={{ headerShown: false }} />
           <Stack.Screen name="resetPassword" options={{ headerShown: false }} />
+          <Stack.Screen name="TermsAndConditions" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />

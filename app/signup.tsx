@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
@@ -28,6 +29,7 @@ const Signup = () => {
   const [emailInputError, setEmailInputError] = useState(false);
   const [passwordInputError, setPasswordInputError] = useState(false);
   const [confirmPasswordInputError, setConfirmPasswordInputError] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -103,6 +105,10 @@ const Signup = () => {
       showError('confirmPassword', 'Passwords do not match');
       return;
     }
+    if (!acceptTerms) {
+      Alert.alert('Terms Required', 'Please accept the Terms and Conditions to continue.');
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -124,6 +130,7 @@ const Signup = () => {
 
   return (
     <SafeAreaView style={[styles.container, { flex: 1 }]}>
+      <StatusBar style="dark" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#333" />
@@ -213,13 +220,38 @@ const Signup = () => {
           </View>
         </View>
 
+        <View style={styles.termsContainer}>
+          <TouchableOpacity 
+            style={styles.checkboxContainer}
+            onPress={() => setAcceptTerms(!acceptTerms)}
+          >
+            <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+              {acceptTerms && (
+                <Ionicons name="checkmark" size={16} color="#fff" />
+              )}
+            </View>
+            <View style={styles.termsTextContainer}>
+              <Text style={styles.termsText}>
+                I agree to the{' '}
+                <Text 
+                  style={styles.termsLink}
+                  onPress={() => router.push('/TermsAndConditions')}
+                >
+                  Terms and Conditions
+                </Text>
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
           style={[
             styles.registerButton,
             isLoading && { opacity: 0.6 },
+            !acceptTerms && styles.registerButtonDisabled,
           ]}
           onPress={handleSignup}
-          disabled={isLoading}
+          disabled={isLoading || !acceptTerms}
         >
           <Text style={styles.registerButtonText}>
             {isLoading ? 'Creating Account...' : 'Register'}
@@ -383,5 +415,45 @@ const styles = StyleSheet.create({
     color: '#007bff',
     fontWeight: '600',
     marginLeft: 4,
+  },
+  termsContainer: {
+    marginBottom: 20,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  checkboxChecked: {
+    backgroundColor: '#F9761A',
+    borderColor: '#F9761A',
+  },
+  termsTextContainer: {
+    flex: 1,
+  },
+  termsText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  termsLink: {
+    color: '#007bff',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  registerButtonDisabled: {
+    backgroundColor: '#ccc',
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });
