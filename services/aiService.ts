@@ -8,6 +8,16 @@ export interface GenerateAsianRecipesParams {
   maxResults?: number;
 }
 
+export interface ModifyRecipeParams {
+  originalRecipe: Meal;
+  modificationRequest: string;
+}
+
+export interface IngredientSubstitutionParams {
+  originalRecipe: Meal;
+  missingIngredients: string[];
+}
+
 export const aiService = {
   async generateAsianRecipes(params: GenerateAsianRecipesParams): Promise<Meal[]> {
     const {
@@ -28,7 +38,6 @@ export const aiService = {
       return [];
     }
 
-    // Add variation elements to generate different versions of the same dish
     const variationElements = [
       'traditional family recipe', 'modern restaurant style', 'regional variation', 'quick weeknight version',
       'authentic street food style', 'healthy low-sodium version', 'spicy hot variation', 'sweet and tangy style',
@@ -36,7 +45,7 @@ export const aiService = {
     ];
     
     const randomVariation = variationElements[Math.floor(Math.random() * variationElements.length)];
-    const timestamp = Date.now(); // Add timestamp for uniqueness
+    const timestamp = Date.now();
     
     const userPrompt =
       `Generate ${maxResults} Asian recipes as structured JSON. Constraints:\n` +
@@ -153,6 +162,242 @@ export const aiService = {
     } catch (e) {
       console.warn('AI generation failed', e);
       return [];
+    }
+  },
+
+  async modifyRecipe(params: ModifyRecipeParams): Promise<Meal | null> {
+    const { originalRecipe, modificationRequest } = params;
+
+    const apiKey =
+      process.env.EXPO_PUBLIC_GEMINI_API_KEY ||
+      (Constants?.expoConfig?.extra as any)?.EXPO_PUBLIC_GEMINI_API_KEY ||
+      (globalThis as any)?.EXPO_PUBLIC_GEMINI_API_KEY ||
+      (Constants?.manifest as any)?.extra?.EXPO_PUBLIC_GEMINI_API_KEY;
+
+    if (!apiKey) {
+      console.warn('Missing EXPO_PUBLIC_GEMINI_API_KEY');
+      return null;
+    }
+
+    const userPrompt = `Modify this recipe based on the user's request while keeping the same dish name and maintaining the same output quality.
+
+Original Recipe:
+- Name: ${originalRecipe.strMeal}
+- Category: ${originalRecipe.strCategory}
+- Area: ${originalRecipe.strArea}
+- Instructions: ${originalRecipe.strInstructions}
+
+User's modification request: ${modificationRequest}
+
+Please modify the recipe according to the user's request. The modified recipe should:
+1. Keep the same dish name: ${originalRecipe.strMeal}
+2. Maintain the same category and area
+3. Update ingredients and instructions based on the modification request
+4. Ensure the final dish is still recognizable as the same type of meal
+5. Keep the same cooking time and difficulty level unless specifically requested to change
+
+Return the modified recipe as JSON with the following structure:
+{
+  "strMeal": "dish name",
+  "strCategory": "category",
+  "strArea": "area", 
+  "strInstructions": "step-by-step instructions",
+  "strMealThumb": "image URL (keep original or suggest new one)"
+}
+
+Return only the JSON object, no additional text.`;
+
+    const body = {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: userPrompt }]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        response_mime_type: 'application/json'
+      }
+    } as any;
+
+    try {
+      const resp = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-goog-api-key': apiKey
+          },
+          body: JSON.stringify(body)
+        }
+      );
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.warn('Gemini error', resp.status, text);
+        return null;
+      }
+
+      const data = await resp.json();
+      const content = data?.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
+      if (!content) return null;
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(content);
+      } catch (e) {
+        const match = content.match(/\{[\s\S]*\}/);
+        parsed = match ? JSON.parse(match[0]) : null;
+      }
+
+      if (!parsed) return null;
+
+      const modifiedMeal: Meal = {
+        ...originalRecipe,
+        strMeal: parsed.strMeal || originalRecipe.strMeal,
+        strCategory: parsed.strCategory || originalRecipe.strCategory,
+        strArea: parsed.strArea || originalRecipe.strArea,
+        strInstructions: parsed.strInstructions || originalRecipe.strInstructions,
+        
+        strMealThumb: originalRecipe.strMealThumb,
+     
+        isModified: true,
+        modificationDate: new Date().toISOString(),
+        originalId: originalRecipe.idMeal,
+        modificationRequest: modificationRequest
+      } as any;
+
+      return modifiedMeal;
+    } catch (e) {
+      console.warn('AI recipe modification failed', e);
+      return null;
+    }
+  },
+
+  async suggestIngredientSubstitutions(params: IngredientSubstitutionParams): Promise<Meal | null> {
+    const { originalRecipe, missingIngredients } = params;
+
+    const apiKey =
+      process.env.EXPO_PUBLIC_GEMINI_API_KEY ||
+      (Constants?.expoConfig?.extra as any)?.EXPO_PUBLIC_GEMINI_API_KEY ||
+      (globalThis as any)?.EXPO_PUBLIC_GEMINI_API_KEY ||
+      (Constants?.manifest as any)?.extra?.EXPO_PUBLIC_GEMINI_API_KEY;
+
+    if (!apiKey) {
+      console.warn('Missing EXPO_PUBLIC_GEMINI_API_KEY');
+      return null;
+    }
+
+    const userPrompt = `I need ingredient substitutions for this recipe. The user doesn't have these ingredients: ${missingIngredients.join(', ')}.
+
+Original Recipe:
+- Name: ${originalRecipe.strMeal}
+- Instructions: ${originalRecipe.strInstructions}
+
+IMPORTANT: First identify the CORE INGREDIENTS that define this dish and cannot be substituted (e.g., chicken in chicken curry, beef in beef stew, salmon in salmon fillet, etc.). These core ingredients should NOT be included in substitutions.
+
+Please provide suitable substitutions for the missing ingredients and update the recipe accordingly. The substitutions should:
+1. Maintain the same flavor profile and dish type
+2. Be commonly available ingredients
+3. Keep the same cooking method and timing
+4. Provide the same or similar nutritional value
+5. NEVER substitute core ingredients that define the dish
+
+For each missing ingredient, suggest 1-2 alternatives with quantities adjusted if needed.
+
+Return the modified recipe as JSON with the following structure:
+{
+  "strMeal": "dish name",
+  "strCategory": "category",
+  "strArea": "area", 
+  "strInstructions": "updated step-by-step instructions with substitutions",
+  "strMealThumb": "image URL (keep original)",
+  "coreIngredients": ["list of core ingredients that cannot be substituted"],
+  "substitutions": [
+    {
+      "original": "missing ingredient",
+      "substitute": "suggested substitute",
+      "quantity": "adjusted quantity if needed",
+      "note": "brief explanation of why this works"
+    }
+  ],
+  "cannotSubstitute": [
+    {
+      "ingredient": "core ingredient name",
+      "reason": "why this ingredient cannot be substituted"
+    }
+  ]
+}
+
+Return only the JSON object, no additional text.`;
+
+    const body = {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: userPrompt }]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        response_mime_type: 'application/json'
+      }
+    } as any;
+
+    try {
+      const resp = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-goog-api-key': apiKey
+          },
+          body: JSON.stringify(body)
+        }
+      );
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.warn('Gemini error', resp.status, text);
+        return null;
+      }
+
+      const data = await resp.json();
+      const content = data?.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
+      if (!content) return null;
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(content);
+      } catch (e) {
+        const match = content.match(/\{[\s\S]*\}/);
+        parsed = match ? JSON.parse(match[0]) : null;
+      }
+
+      if (!parsed) return null;
+
+      const substitutedMeal: Meal = {
+        ...originalRecipe,
+        strMeal: parsed.strMeal || originalRecipe.strMeal,
+        strCategory: parsed.strCategory || originalRecipe.strCategory,
+        strArea: parsed.strArea || originalRecipe.strArea,
+        strInstructions: parsed.strInstructions || originalRecipe.strInstructions,
+        
+        strMealThumb: originalRecipe.strMealThumb,
+        
+        isSubstituted: true,
+        substitutionDate: new Date().toISOString(),
+        originalId: originalRecipe.idMeal,
+        substitutions: parsed.substitutions || [],
+        missingIngredients: missingIngredients
+      } as any;
+
+      return substitutedMeal;
+    } catch (e) {
+      console.warn('AI ingredient substitution failed', e);
+      return null;
     }
   }
 };
