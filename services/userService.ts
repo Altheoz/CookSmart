@@ -7,12 +7,12 @@ import { auth, db, functions } from '../FirebaseConfig';
 export interface UserData {
   uid: string;
   email: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'super_admin';
   createdAt: Date;
 }
 
 export class UserService {
-  static async createUser(email: string, password: string, role: 'user' | 'admin' = 'user'): Promise<UserData> {
+  static async createUser(email: string, password: string, role: 'user' | 'admin' | 'super_admin' = 'user'): Promise<UserData> {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -65,7 +65,7 @@ export class UserService {
     }
   }
 
-  static async updateUserRole(uid: string, role: 'user' | 'admin'): Promise<void> {
+  static async updateUserRole(uid: string, role: 'user' | 'admin' | 'super_admin'): Promise<void> {
     try {
       await updateDoc(doc(db, 'users', uid), { role });
     } catch (error) {
@@ -170,9 +170,19 @@ export class UserService {
   static async isAdmin(uid: string): Promise<boolean> {
     try {
       const userData = await this.getUserData(uid);
-      return userData?.role === 'admin';
+      return userData?.role === 'admin' || userData?.role === 'super_admin';
     } catch (error) {
       console.error('Error checking admin status:', error);
+      return false;
+    }
+  }
+
+  static async isSuperAdmin(uid: string): Promise<boolean> {
+    try {
+      const userData = await this.getUserData(uid);
+      return userData?.role === 'super_admin';
+    } catch (error) {
+      console.error('Error checking super admin status:', error);
       return false;
     }
   }
@@ -185,7 +195,7 @@ export class UserService {
     try {
       const users = await this.getAllUsers();
       const totalUsers = users.length;
-      const totalAdmins = users.filter(user => user.role === 'admin').length;
+      const totalAdmins = users.filter(user => user.role === 'admin' || user.role === 'super_admin').length;
       
       
       const monthlyData: { [key: string]: number } = {};

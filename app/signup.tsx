@@ -220,6 +220,7 @@ const Signup = () => {
           </View>
         </View>
 
+
         <View style={styles.termsContainer}>
           <TouchableOpacity 
             style={styles.checkboxContainer}

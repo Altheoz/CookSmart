@@ -178,7 +178,7 @@ const Login = () => {
         
         try {
           const userData = await UserService.getUserData(userCredential.user.uid);
-          if (userData?.role === 'admin') {
+          if (userData?.role === 'admin' || userData?.role === 'super_admin') {
             router.replace('/admin-dashboard');
           } else {
             router.replace('/(tabs)/home');

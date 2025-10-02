@@ -22,6 +22,7 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'super_admin' | null>(null);
   const [userStats, setUserStats] = useState({
     totalUsers: 0,
     totalAdmins: 0,
@@ -29,9 +30,22 @@ const AdminDashboard = () => {
   });
 
   useEffect(() => {
+    loadCurrentUserRole();
     loadUsers();
     loadUserStats();
   }, []);
+
+  const loadCurrentUserRole = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const userData = await UserService.getUserData(currentUser.uid);
+        setCurrentUserRole(userData?.role as 'admin' | 'super_admin' || null);
+      }
+    } catch (error) {
+      console.error('Error loading current user role:', error);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -59,6 +73,18 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteUser = async (user: UserData) => {
+   
+    if (currentUserRole === 'admin' && (user.role === 'admin' || user.role === 'super_admin')) {
+      Alert.alert('Permission Denied', 'You cannot delete other administrators.');
+      return;
+    }
+
+   
+    if (currentUserRole === 'super_admin' && user.role === 'super_admin' && user.uid !== auth.currentUser?.uid) {
+      Alert.alert('Permission Denied', 'You cannot delete other super administrators.');
+      return;
+    }
+
     Alert.alert(
       'Delete User',
       `Are you sure you want to delete ${user.email}?`,
@@ -84,6 +110,18 @@ const AdminDashboard = () => {
   };
 
   const handleToggleAdmin = async (user: UserData) => {
+  
+    if (currentUserRole !== 'super_admin') {
+      Alert.alert('Permission Denied', 'Only super administrators can manage admin roles.');
+      return;
+    }
+
+   
+    if (user.role === 'super_admin') {
+      Alert.alert('Permission Denied', 'Super administrator roles cannot be modified.');
+      return;
+    }
+
     const newRole = user.role === 'admin' ? 'user' : 'admin';
     const action = newRole === 'admin' ? 'make admin' : 'remove admin privileges';
     
@@ -141,8 +179,12 @@ const AdminDashboard = () => {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Admin Dashboard</Text>
-              <Text style={styles.headerSubtitle}>Manage users</Text>
+              <Text style={styles.headerTitle}>
+                {currentUserRole === 'super_admin' ? 'Super Admin Dashboard' : 'Admin Dashboard'}
+              </Text>
+              <Text style={styles.headerSubtitle}>
+                {currentUserRole === 'super_admin' ? 'Manage users and administrators' : 'Manage users'}
+              </Text>
             </View>
             <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
               <Ionicons name="log-out-outline" size={20} color="#fff" />
@@ -216,15 +258,22 @@ const AdminDashboard = () => {
               <View style={styles.userInfo}>
                 <View style={styles.userAvatar}>
                   <Ionicons 
-                    name={item.role === 'admin' ? 'shield-checkmark' : 'person'} 
+                    name={
+                      item.role === 'super_admin' ? 'shield' : 
+                      item.role === 'admin' ? 'shield-checkmark' : 'person'
+                    } 
                     size={24} 
-                    color={item.role === 'admin' ? '#28a745' : '#F9761A'} 
+                    color={
+                      item.role === 'super_admin' ? '#dc3545' : 
+                      item.role === 'admin' ? '#28a745' : '#F9761A'
+                    } 
                   />
                 </View>
                 <View style={styles.userDetails}>
                   <Text style={styles.userEmail}>{item.email || 'No email'}</Text>
                   <Text style={styles.userRole}>
-                    {item.role ? item.role.charAt(0).toUpperCase() + item.role.slice(1) : 'User'}
+                    {item.role === 'super_admin' ? 'Super Admin' : 
+                     item.role === 'admin' ? 'Admin' : 'User'}
                   </Text>
                   <Text style={styles.userDate}>
                     Joined: {item.createdAt ? item.createdAt.toLocaleDateString() : 'Unknown'}
@@ -232,25 +281,34 @@ const AdminDashboard = () => {
                 </View>
               </View>
               <View style={styles.userActions}>
-                <TouchableOpacity
-                  onPress={() => handleToggleAdmin(item)}
-                  style={[
-                    styles.actionButton,
-                    item.role === 'admin' ? styles.removeAdminButton : styles.makeAdminButton
-                  ]}
-                >
-                  <Ionicons 
-                    name={item.role === 'admin' ? 'shield-checkmark' : 'shield-outline'} 
-                    size={20} 
-                    color={item.role === 'admin' ? '#28a745' : '#dc3545'} 
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleDeleteUser(item)}
-                  style={[styles.actionButton, styles.deleteButton]}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#dc3545" />
-                </TouchableOpacity>
+                
+                {currentUserRole === 'super_admin' && item.role !== 'super_admin' && (
+                  <TouchableOpacity
+                    onPress={() => handleToggleAdmin(item)}
+                    style={[
+                      styles.actionButton,
+                      item.role === 'admin' ? styles.removeAdminButton : styles.makeAdminButton
+                    ]}
+                  >
+                    <Ionicons 
+                      name={item.role === 'admin' ? 'shield-checkmark' : 'shield-outline'} 
+                      size={20} 
+                      color={item.role === 'admin' ? '#28a745' : '#dc3545'} 
+                    />
+                  </TouchableOpacity>
+                )}
+                
+             
+                {((currentUserRole === 'admin' && item.role === 'user') || 
+                  (currentUserRole === 'super_admin' && item.role !== 'super_admin') ||
+                  (currentUserRole === 'super_admin' && item.role === 'super_admin' && item.uid === auth.currentUser?.uid)) && (
+                  <TouchableOpacity
+                    onPress={() => handleDeleteUser(item)}
+                    style={[styles.actionButton, styles.deleteButton]}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#dc3545" />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
             ))
