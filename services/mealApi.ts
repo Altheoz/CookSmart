@@ -52,6 +52,17 @@ export interface Meal {
   strImageSource?: string;
   strCreativeCommonsConfirmed?: string;
   dateModified?: string;
+  
+  nutritionalInfo?: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber?: number;
+    sugar?: number;
+    sodium?: number;
+    servings: number;
+  };
 }
 
 export interface MealResponse {

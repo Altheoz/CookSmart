@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 
 import { useRecipeContext } from '@/contexts/RecipeContext';
-import { aiService } from '@/services/aiService';
+import { aiService, NutritionalInfo } from '@/services/aiService';
 import { mealApiService } from '@/services/mealApi';
 
 export default function MealDetailScreen() {
@@ -27,6 +27,9 @@ export default function MealDetailScreen() {
   const [missingIngredients, setMissingIngredients] = useState<string[]>([]);
   const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
   const [coreIngredients, setCoreIngredients] = useState<string[]>([]);
+  const [nutritionalInfo, setNutritionalInfo] = useState<NutritionalInfo | null>(null);
+  const [isLoadingNutrition, setIsLoadingNutrition] = useState(false);
+  const [nutritionError, setNutritionError] = useState<string | null>(null);
 
   
   const currentMeal = modifiedMeal || meal;
@@ -34,6 +37,31 @@ export default function MealDetailScreen() {
   const ingredients = React.useMemo(() => mealApiService.extractIngredients(currentMeal), [currentMeal.idMeal]);
   const cookingTime = React.useMemo(() => mealApiService.getEstimatedCookingTime(currentMeal), [currentMeal.idMeal, currentMeal.strInstructions]);
   const difficulty = React.useMemo(() => mealApiService.getDifficultyLevel(currentMeal), [currentMeal.idMeal, currentMeal.strInstructions]);
+
+
+  const fetchNutritionalInfo = React.useCallback(async (mealToAnalyze: any) => {
+    setIsLoadingNutrition(true);
+    setNutritionError(null);
+    
+    try {
+      const nutritionData = await aiService.analyzeNutritionalInfo({ meal: mealToAnalyze });
+      if (nutritionData) {
+        setNutritionalInfo(nutritionData);
+      } else {
+        setNutritionError('Unable to analyze nutritional information');
+      }
+    } catch (error) {
+      console.error('Error fetching nutritional info:', error);
+      setNutritionError('Failed to load nutritional information');
+    } finally {
+      setIsLoadingNutrition(false);
+    }
+  }, []);
+
+  
+  React.useEffect(() => {
+    fetchNutritionalInfo(currentMeal);
+  }, [currentMeal.idMeal, fetchNutritionalInfo]);
 
   const handleToggleSaved = async () => {
     if (isSaved(meal.idMeal)) {
@@ -176,7 +204,9 @@ export default function MealDetailScreen() {
               </View>
               <View style={styles.chip}>
                 <Ionicons name="people-outline" size={14} color="#111" />
-                <Text style={styles.chipText}>4 servings</Text>
+                <Text style={styles.chipText}>
+                  {nutritionalInfo?.servings || 4} servings
+                </Text>
               </View>
               {(() => {
                 const difficultyColors = {
@@ -261,23 +291,63 @@ export default function MealDetailScreen() {
           </View>
 
           <View style={styles.nutritionColumn}>
-            <Text style={styles.sectionTitle}>Nutritional Info</Text>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionLabel}>Calories</Text>
-              <Text style={styles.nutritionValue}>350 Kcal</Text>
+            <View style={styles.nutritionHeader}>
+              <Text style={styles.sectionTitle}>Nutritional Info</Text>
             </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionLabel}>Protein</Text>
-              <Text style={styles.nutritionValue}>25g</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionLabel}>Carbs</Text>
-              <Text style={styles.nutritionValue}>45g</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionLabel}>Fat</Text>
-              <Text style={styles.nutritionValue}>12g</Text>
-            </View>
+            
+            {nutritionError ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{nutritionError}</Text>
+                <TouchableOpacity 
+                  style={styles.retryButton}
+                  onPress={() => fetchNutritionalInfo(currentMeal)}
+                >
+                  <Ionicons name="refresh-outline" size={16} color="#FF6B35" />
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : nutritionalInfo ? (
+              <>
+                <View style={styles.nutritionItem}>
+                  <Text style={styles.nutritionLabel}>Calories</Text>
+                  <Text style={styles.nutritionValue}>{nutritionalInfo.calories} Kcal</Text>
+                </View>
+                <View style={styles.nutritionItem}>
+                  <Text style={styles.nutritionLabel}>Protein</Text>
+                  <Text style={styles.nutritionValue}>{nutritionalInfo.protein}g</Text>
+                </View>
+                <View style={styles.nutritionItem}>
+                  <Text style={styles.nutritionLabel}>Carbs</Text>
+                  <Text style={styles.nutritionValue}>{nutritionalInfo.carbs}g</Text>
+                </View>
+                <View style={styles.nutritionItem}>
+                  <Text style={styles.nutritionLabel}>Fat</Text>
+                  <Text style={styles.nutritionValue}>{nutritionalInfo.fat}g</Text>
+                </View>
+                {nutritionalInfo.fiber && (
+                  <View style={styles.nutritionItem}>
+                    <Text style={styles.nutritionLabel}>Fiber</Text>
+                    <Text style={styles.nutritionValue}>{nutritionalInfo.fiber}g</Text>
+                  </View>
+                )}
+                {nutritionalInfo.sodium && (
+                  <View style={styles.nutritionItem}>
+                    <Text style={styles.nutritionLabel}>Sodium</Text>
+                    <Text style={styles.nutritionValue}>{nutritionalInfo.sodium}mg</Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <View style={styles.nutritionPlaceholder}>
+                <Text style={styles.placeholderText}>Loading nutritional information...</Text>
+              </View>
+            )}
+
+            {isLoadingNutrition && (
+              <View style={styles.loadingIndicatorBottom}>
+                <Text style={styles.loadingText}>Analyzing...</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -1016,5 +1086,59 @@ const styles = StyleSheet.create({
     color: '#FF6B35',
     fontSize: 10,
     fontWeight: '600',
+  },
+  nutritionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  loadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 10,
+    color: '#FF6B35',
+    fontStyle: 'italic',
+  },
+  loadingIndicatorBottom: {
+    marginTop: 8,
+    alignItems: 'flex-start',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#f44336',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+    gap: 4,
+  },
+  retryButtonText: {
+    fontSize: 10,
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  nutritionPlaceholder: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  placeholderText: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
   },
 });

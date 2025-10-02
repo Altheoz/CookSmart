@@ -18,6 +18,21 @@ export interface IngredientSubstitutionParams {
   missingIngredients: string[];
 }
 
+export interface NutritionalAnalysisParams {
+  meal: Meal;
+}
+
+export interface NutritionalInfo {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  servings: number;
+}
+
 export const aiService = {
   async generateAsianRecipes(params: GenerateAsianRecipesParams): Promise<Meal[]> {
     const {
@@ -397,6 +412,129 @@ Return only the JSON object, no additional text.`;
       return substitutedMeal;
     } catch (e) {
       console.warn('AI ingredient substitution failed', e);
+      return null;
+    }
+  },
+
+  async analyzeNutritionalInfo(params: NutritionalAnalysisParams): Promise<NutritionalInfo | null> {
+    const { meal } = params;
+
+    const apiKey =
+      process.env.EXPO_PUBLIC_GEMINI_API_KEY ||
+      (Constants?.expoConfig?.extra as any)?.EXPO_PUBLIC_GEMINI_API_KEY ||
+      (globalThis as any)?.EXPO_PUBLIC_GEMINI_API_KEY ||
+      (Constants?.manifest as any)?.extra?.EXPO_PUBLIC_GEMINI_API_KEY;
+
+    if (!apiKey) {
+      console.warn('Missing EXPO_PUBLIC_GEMINI_API_KEY');
+      return null;
+    }
+
+   
+    const ingredients: string[] = [];
+    for (let i = 1; i <= 20; i++) {
+      const ingredient = (meal as any)[`strIngredient${i}`];
+      const measure = (meal as any)[`strMeasure${i}`];
+      if (ingredient && ingredient.trim()) {
+        const ingredientWithMeasure = measure && measure.trim() 
+          ? `${measure.trim()} ${ingredient.trim()}`
+          : ingredient.trim();
+        ingredients.push(ingredientWithMeasure);
+      }
+    }
+
+    const userPrompt = `Analyze the nutritional information for this recipe and provide accurate nutritional values per serving.
+
+Recipe Details:
+- Name: ${meal.strMeal}
+- Category: ${meal.strCategory}
+- Cuisine: ${meal.strArea}
+- Ingredients: ${ingredients.join(', ')}
+- Instructions: ${meal.strInstructions}
+
+Please analyze this recipe and calculate the nutritional information per serving. Consider:
+1. The actual ingredients and their quantities
+2. Cooking methods that might affect nutritional values
+3. Standard serving sizes for this type of dish
+4. Realistic portion sizes for the cuisine type
+
+Provide accurate nutritional analysis based on the specific ingredients listed. If an ingredient quantity is unclear, use reasonable estimates based on typical recipe proportions.
+
+Return the nutritional information as JSON with the following structure:
+{
+  "calories": number (total calories per serving),
+  "protein": number (grams of protein per serving),
+  "carbs": number (grams of carbohydrates per serving),
+  "fat": number (grams of fat per serving),
+  "fiber": number (grams of fiber per serving, optional),
+  "sugar": number (grams of sugar per serving, optional),
+  "sodium": number (milligrams of sodium per serving, optional),
+  "servings": number (estimated number of servings this recipe makes)
+}
+
+Be as accurate as possible based on the ingredients provided. Return only the JSON object, no additional text.`;
+
+    const body = {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: userPrompt }]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.3, 
+        response_mime_type: 'application/json'
+      }
+    } as any;
+
+    try {
+      const resp = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-goog-api-key': apiKey
+          },
+          body: JSON.stringify(body)
+        }
+      );
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.warn('Gemini error', resp.status, text);
+        return null;
+      }
+
+      const data = await resp.json();
+      const content = data?.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
+      if (!content) return null;
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(content);
+      } catch (e) {
+        const match = content.match(/\{[\s\S]*\}/);
+        parsed = match ? JSON.parse(match[0]) : null;
+      }
+
+      if (!parsed) return null;
+
+    
+      const nutritionalInfo: NutritionalInfo = {
+        calories: Math.round(parsed.calories || 0),
+        protein: Math.round((parsed.protein || 0) * 10) / 10,
+        carbs: Math.round((parsed.carbs || 0) * 10) / 10,
+        fat: Math.round((parsed.fat || 0) * 10) / 10,
+        fiber: parsed.fiber ? Math.round(parsed.fiber * 10) / 10 : undefined,
+        sugar: parsed.sugar ? Math.round(parsed.sugar * 10) / 10 : undefined,
+        sodium: parsed.sodium ? Math.round(parsed.sodium) : undefined,
+        servings: parsed.servings || 4
+      };
+
+      return nutritionalInfo;
+    } catch (e) {
+      console.warn('AI nutritional analysis failed', e);
       return null;
     }
   }
