@@ -15,11 +15,25 @@ import {
 import { useRecipeContext } from '@/contexts/RecipeContext';
 import { aiService, NutritionalInfo } from '@/services/aiService';
 import { mealApiService } from '@/services/mealApi';
+import { OfflineRecipeService } from '@/services/offlineRecipeService';
 
 export default function MealDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { meal } = route.params;
+  const { meal: mealParam } = route.params;
+  
+  
+  const meal = React.useMemo(() => {
+    if (typeof mealParam === 'string') {
+      try {
+        return JSON.parse(mealParam);
+      } catch (error) {
+        console.error('Error parsing meal data:', error);
+        return mealParam;
+      }
+    }
+    return mealParam;
+  }, [mealParam]);
   const { addToSaved, isSaved, removeFromSaved, addEditedRecipe, removeEditedRecipe, isEdited } = useRecipeContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [isModifying, setIsModifying] = useState(false);
@@ -30,6 +44,7 @@ export default function MealDetailScreen() {
   const [nutritionalInfo, setNutritionalInfo] = useState<NutritionalInfo | null>(null);
   const [isLoadingNutrition, setIsLoadingNutrition] = useState(false);
   const [nutritionError, setNutritionError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   
   const currentMeal = modifiedMeal || meal;
@@ -40,6 +55,11 @@ export default function MealDetailScreen() {
 
 
   const fetchNutritionalInfo = React.useCallback(async (mealToAnalyze: any) => {
+    if (mealToAnalyze.nutritionalInfo) {
+      setNutritionalInfo(mealToAnalyze.nutritionalInfo);
+      return;
+    }
+
     setIsLoadingNutrition(true);
     setNutritionError(null);
     
@@ -47,6 +67,13 @@ export default function MealDetailScreen() {
       const nutritionData = await aiService.analyzeNutritionalInfo({ meal: mealToAnalyze });
       if (nutritionData) {
         setNutritionalInfo(nutritionData);
+      
+        if (modifiedMeal) {
+          setModifiedMeal((prev: any) => ({ ...prev, nutritionalInfo: nutritionData }));
+        } else {
+      
+          meal.nutritionalInfo = nutritionData;
+        }
       } else {
         setNutritionError('Unable to analyze nutritional information');
       }
@@ -56,19 +83,31 @@ export default function MealDetailScreen() {
     } finally {
       setIsLoadingNutrition(false);
     }
-  }, []);
+  }, [modifiedMeal, meal]);
 
   
   React.useEffect(() => {
-    fetchNutritionalInfo(currentMeal);
-  }, [currentMeal.idMeal, fetchNutritionalInfo]);
+    if (meal && meal.idMeal) {
+      console.log('Meal data loaded:', {
+        id: meal.idMeal,
+        name: meal.strMeal,
+        hasImage: !!meal.strMealThumb,
+        hasInstructions: !!meal.strInstructions,
+        hasNutritionalInfo: !!meal.nutritionalInfo,
+        hasSubstitutions: !!meal.substitutions,
+        hasCoreIngredients: !!meal.coreIngredients
+      });
+      setIsLoading(false);
+      fetchNutritionalInfo(currentMeal);
+    }
+  }, [meal, currentMeal.idMeal, fetchNutritionalInfo]);
 
   const handleToggleSaved = async () => {
     if (isSaved(meal.idMeal)) {
       await removeFromSaved(meal.idMeal);
       Alert.alert('Removed', 'Recipe removed from your saved list.');
     } else {
-      await addToSaved(meal);
+      await addToSaved(currentMeal);
       Alert.alert('Saved', 'Recipe saved to your collection.');
     }
   };
@@ -144,6 +183,10 @@ export default function MealDetailScreen() {
   };
 
   const getIngredientSubstitution = (ingredient: string) => {
+
+    const offlineSubstitution = OfflineRecipeService.getIngredientSubstitution(currentMeal, ingredient);
+    if (offlineSubstitution) return offlineSubstitution;
+    
     if (!modifiedMeal?.substitutions) return null;
     return modifiedMeal.substitutions.find((sub: any) => 
       sub.original.toLowerCase() === ingredient.toLowerCase()
@@ -151,6 +194,11 @@ export default function MealDetailScreen() {
   };
 
   const isCoreIngredient = (ingredient: string) => {
+    
+    const isOfflineCore = OfflineRecipeService.isCoreIngredient(currentMeal, ingredient);
+    if (isOfflineCore) return true;
+    
+    
     return coreIngredients.some(core => 
       core.toLowerCase().includes(ingredient.toLowerCase()) ||
       ingredient.toLowerCase().includes(core.toLowerCase())
@@ -170,11 +218,27 @@ export default function MealDetailScreen() {
     return instructions.filter((step: string) => step.toLowerCase().includes(q));
   }, [instructions, searchQuery]);
 
+  
+  if (isLoading || !meal || !meal.idMeal) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingTextMain}>Loading recipe...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.heroContainer}>
-          <Image source={{ uri: meal.strMealThumb }} style={styles.recipeImage} />
+          <Image 
+            source={{ uri: currentMeal.strMealThumb }} 
+            style={styles.recipeImage}
+            onError={(error) => console.log('Image load error:', error)}
+            onLoad={() => console.log('Image loaded successfully')}
+          />
           <View style={styles.imageOverlay} />
 
           <View style={styles.topControls}>
@@ -191,12 +255,20 @@ export default function MealDetailScreen() {
 
           <View style={styles.heroTextContainer}>
             <Text style={styles.heroTitle}>{currentMeal.strMeal}</Text>
-            {modifiedMeal && (
-              <View style={styles.modifiedBadge}>
-                <Ionicons name="create-outline" size={12} color="#fff" />
-                <Text style={styles.modifiedBadgeText}>Modified</Text>
-              </View>
-            )}
+            <View style={styles.badgeContainer}>
+              {modifiedMeal && (
+                <View style={styles.modifiedBadge}>
+                  <Ionicons name="create-outline" size={12} color="#fff" />
+                  <Text style={styles.modifiedBadgeText}>Modified</Text>
+                </View>
+              )}
+              {OfflineRecipeService.hasCompleteOfflineData(currentMeal) && (
+                <View style={styles.offlineBadge}>
+                  <Ionicons name="cloud-done-outline" size={12} color="#fff" />
+                  <Text style={styles.offlineBadgeText}>Complete Offline Data</Text>
+                </View>
+              )}
+            </View>
             <View style={styles.metaChipsRow}>
               <View style={styles.chip}>
                 <Ionicons name="time-outline" size={14} color="#111" />
@@ -759,6 +831,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 6,
+  },
+  offlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+    alignSelf: 'flex-start',
+  },
+  offlineBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingTextMain: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   applyButtonDisabled: {
     backgroundColor: '#ccc',

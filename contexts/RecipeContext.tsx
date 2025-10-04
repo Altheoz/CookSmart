@@ -1,6 +1,7 @@
 import { auth, db } from '@/FirebaseConfig';
 import { CookingHistoryService, CookingSession, CookingStats } from '@/services/cookingHistoryService';
 import { Meal } from '@/services/mealApi';
+import { OfflineRecipeService } from '@/services/offlineRecipeService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -232,13 +233,32 @@ export const RecipeProvider: React.FC<RecipeProviderProps> = ({ children }) => {
 
   const addToSaved = async (meal: Meal) => {
     if (savedRecipes.some(m => m.idMeal === meal.idMeal)) return;
-    const newSavedRecipes = [...savedRecipes, meal];
-    await saveSavedRecipes(newSavedRecipes);
-    if (uid) {
-      try {
-        await setDoc(doc(savedCollectionRef(uid), meal.idMeal), meal);
-      } catch (error) {
-        console.error('Error saving recipe to Firestore:', error);
+    
+    try {
+    
+      const enhancedMeal = await OfflineRecipeService.enhanceMealForOffline(meal);
+      
+      const newSavedRecipes = [...savedRecipes, enhancedMeal];
+      await saveSavedRecipes(newSavedRecipes);
+      
+      if (uid) {
+        try {
+          await setDoc(doc(savedCollectionRef(uid), enhancedMeal.idMeal), enhancedMeal);
+        } catch (error) {
+          console.error('Error saving recipe to Firestore:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error enhancing meal for offline:', error);
+   
+      const newSavedRecipes = [...savedRecipes, meal];
+      await saveSavedRecipes(newSavedRecipes);
+      if (uid) {
+        try {
+          await setDoc(doc(savedCollectionRef(uid), meal.idMeal), meal);
+        } catch (error) {
+          console.error('Error saving recipe to Firestore:', error);
+        }
       }
     }
   };

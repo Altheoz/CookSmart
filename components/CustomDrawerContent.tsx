@@ -38,6 +38,7 @@ export default function CustomDrawerContent(props: any) {
     { label: 'History', lib: 'ion', name: 'time-outline', route: 'DrawerHistory' },
     { label: 'Favorites', lib: 'fa', name: 'heart', route: 'DrawerFavorite', count: getFavoritesCount() },
     { label: 'Recipes Saved', lib: 'ion', name: 'bookmark', route: 'DrawerSaved', count: getSavedCount() },
+    { label: 'Offline Recipes', lib: 'ion', name: 'cloud-offline', route: 'OfflineRecipes', count: getSavedCount() },
   ];
 
   const currentRoute = props.state.routeNames[props.state.index];
@@ -75,7 +76,13 @@ export default function CustomDrawerContent(props: any) {
                 styles.menuItem,
                 isActive && styles.menuItemActive
               ]}
-              onPress={() => props.navigation.navigate(item.route)}
+              onPress={() => {
+                if (item.route === 'OfflineRecipes') {
+                  props.navigation.navigate('OfflineRecipes');
+                } else {
+                  props.navigation.navigate(item.route);
+                }
+              }}
             >
               <View style={styles.menuItemLeft}>
                 {renderIcon()}

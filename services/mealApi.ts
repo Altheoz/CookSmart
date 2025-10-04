@@ -63,6 +63,22 @@ export interface Meal {
     sodium?: number;
     servings: number;
   };
+  
+  
+  substitutions?: {
+    original: string;
+    substitute: string;
+    quantity?: string;
+    note?: string;
+  }[];
+  
+  coreIngredients?: string[];
+  
+  
+  offlineData?: {
+    lastUpdated: string;
+    hasCompleteData: boolean;
+  };
 }
 
 export interface MealResponse {

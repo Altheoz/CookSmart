@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-
+import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';
 import React, { useEffect } from 'react';
 import {
@@ -26,7 +27,8 @@ const Index = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-     
+     <StatusBar style="dark" />
+
       <View style={styles.bgBlobTop} />
       <View style={styles.bgBlobBottom} />
 
@@ -53,6 +55,13 @@ const Index = () => {
 
           <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/signup')}>
             <Text style={styles.secondaryButtonText}>Create Account</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/OfflineRecipes')}>
+            <View style={styles.offlineButtonContent}>
+              <Ionicons name="cloud-offline" size={20} color="#F9761A" style={styles.offlineButtonIcon} />
+              <Text style={styles.offlineButtonText}>View Saved Recipes (Offline)</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -164,6 +173,20 @@ const styles = StyleSheet.create({
     color: '#F9761A',
     fontSize: 18,
     fontWeight: '700',
+  },
+  offlineButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offlineButtonIcon: {
+    marginRight: 8,
+  },
+  offlineButtonText: {
+    color: '#F9761A',
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });
 
