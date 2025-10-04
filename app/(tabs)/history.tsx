@@ -1,4 +1,4 @@
-import { FontAwesome, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
@@ -9,23 +9,22 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import HomeContent from './home';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
 import { useRecipeContext } from '@/contexts/RecipeContext';
 import DiscoverContent from './discover';
 import FavoriteContent from './favorite';
 import FeaturedContent from './featured';
-import HistoryContent from './history';
 import ProfileContent from './profile';
 import SavedContent from './saved';
 
 const Drawer = createDrawerNavigator();
 
-function HomeContent() {
+function HistoryContent() {
   const navigation = useNavigation<any>();
   const { getFavoritesCount, getSavedCount } = useRecipeContext();
 
@@ -53,72 +52,17 @@ function HomeContent() {
         </View>
 
 
-        <View style={styles.greetingContainer}>
-          <Text style={styles.greetingTitle}>Good Day!</Text>
-          <Text style={styles.greetingSubtitle}>Ready to Start Cooking?</Text>
-          <Text style={styles.greetingDescription}>
-            Discover amazing recipes, get cooking guidance, and master new culinary
-            skills with your personal AI assistance.
-          </Text>
-        </View>
+        
 
 
         <View style={styles.cardContainer}>
-          <TouchableOpacity
-            style={[styles.card, styles.cardAccentDiscover]}
-            onPress={() => navigation.navigate("DrawerDiscover")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>Discover Recipes</Text>
-              <Text style={styles.cardSubtitle}>Discover New Recipes With AI</Text>
-            </View>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(255,165,0,0.2)' }]}>
-              <MaterialIcons name="search" size={24} color="orange" />
-            </View>
-          </TouchableOpacity>
+        
 
-          <TouchableOpacity
-            style={[styles.card, styles.cardAccentFeatured]}
-            onPress={() => navigation.navigate("DrawerFeatured")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>Featured Recipes</Text>
-              <Text style={styles.cardSubtitle}>Get a Random Recipe Surprise!</Text>
-            </View>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(128,0,128,0.2)' }]}>
-              <Ionicons name="restaurant" size={24} color="purple" />
-            </View>
-          </TouchableOpacity>
+     
 
-          <TouchableOpacity
-            style={[styles.card, styles.cardAccentSaved]}
-            onPress={() => navigation.navigate("DrawerSaved")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>Recipes Saved</Text>
-              <Text style={styles.cardNumber}>{getSavedCount()}</Text>
-            </View>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(30,144,255,0.2)' }]}>
-              <Ionicons name="bookmark" size={24} color="dodgerblue" />
-            </View>
-          </TouchableOpacity>
+          
 
-          <TouchableOpacity
-            style={[styles.card, styles.cardAccentFavorite]}
-            onPress={() => navigation.navigate("DrawerFavorite")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>Favorites</Text>
-              <Text style={styles.cardNumber}>{getFavoritesCount()}</Text>
-            </View>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(220,20,60,0.2)' }]}>
-              <FontAwesome name="heart" size={24} color="crimson" />
-            </View>
-          </TouchableOpacity>
+         
 
         </View>
       </ScrollView>
@@ -147,12 +91,12 @@ export default function HomeScreen() {
 
   return (
     <Drawer.Navigator
-      initialRouteName="DrawerHome"
+      initialRouteName="DrawerHistory"
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{ headerShown: false }}
     >
+        <Drawer.Screen name="DrawerHistory" component={HistoryContent} />
       <Drawer.Screen name="DrawerHome" component={HomeContent} />
-      <Drawer.Screen name="DrawerHistory" component={HistoryContent} />
       <Drawer.Screen name="DrawerFeatured" component={FeaturedContent} />
       <Drawer.Screen name="DrawerDiscover" component={DiscoverContent} />
       <Drawer.Screen name="DrawerFavorite" component={FavoriteContent} />

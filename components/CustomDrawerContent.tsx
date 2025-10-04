@@ -35,6 +35,7 @@ export default function CustomDrawerContent(props: any) {
     { label: 'Home', lib: 'ion', name: 'home', route: 'DrawerHome' },
     { label: 'Featured Recipe', lib: 'feather', name: 'star', route: 'DrawerFeatured' },
     { label: 'Discover Recipe', lib: 'material', name: 'explore', route: 'DrawerDiscover' },
+    { label: 'History', lib: 'ion', name: 'time-outline', route: 'DrawerHistory' },
     { label: 'Favorites', lib: 'fa', name: 'heart', route: 'DrawerFavorite', count: getFavoritesCount() },
     { label: 'Recipes Saved', lib: 'ion', name: 'bookmark', route: 'DrawerSaved', count: getSavedCount() },
   ];

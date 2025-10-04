@@ -34,6 +34,7 @@ export default function TabLayout() {
         <Tabs.Screen name="featured" />
         <Tabs.Screen name="categories" />
         <Tabs.Screen name="discover" />
+        <Tabs.Screen name="history" />
       </Tabs>
     </View>
   );
