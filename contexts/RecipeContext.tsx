@@ -1,4 +1,5 @@
 import { auth, db } from '@/FirebaseConfig';
+import { CookingHistoryService, CookingSession, CookingStats } from '@/services/cookingHistoryService';
 import { Meal } from '@/services/mealApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
@@ -8,18 +9,26 @@ interface RecipeContextType {
   favorites: Meal[];
   savedRecipes: Meal[];
   editedRecipes: Meal[];
+  cookingHistory: CookingSession[];
+  cookingStats: CookingStats;
   addToFavorites: (meal: Meal) => Promise<void>;
   removeFromFavorites: (mealId: string) => Promise<void>;
   addToSaved: (meal: Meal) => Promise<void>;
   removeFromSaved: (mealId: string) => Promise<void>;
   addEditedRecipe: (meal: Meal) => Promise<void>;
   removeEditedRecipe: (mealId: string) => Promise<void>;
+  addCookingSession: (session: CookingSession) => Promise<void>;
+  deleteCookingSession: (sessionId: string) => Promise<void>;
+  clearAllCookingHistory: () => Promise<void>;
   isFavorite: (mealId: string) => boolean;
   isSaved: (mealId: string) => boolean;
   isEdited: (mealId: string) => boolean;
   getFavoritesCount: () => number;
   getSavedCount: () => number;
   getEditedCount: () => number;
+  getCookingHistoryCount: () => number;
+  refreshCookingHistory: () => Promise<void>;
+  refreshCookingStats: () => Promise<void>;
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
@@ -40,6 +49,16 @@ export const RecipeProvider: React.FC<RecipeProviderProps> = ({ children }) => {
   const [favorites, setFavorites] = useState<Meal[]>([]);
   const [savedRecipes, setSavedRecipes] = useState<Meal[]>([]);
   const [editedRecipes, setEditedRecipes] = useState<Meal[]>([]);
+  const [cookingHistory, setCookingHistory] = useState<CookingSession[]>([]);
+  const [cookingStats, setCookingStats] = useState<CookingStats>({
+    totalMealsCooked: 0,
+    totalCookingTime: 0,
+    averageRating: 0,
+    favoriteCategory: '',
+    favoriteCuisine: '',
+    streak: 0,
+    achievements: [],
+  });
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
 
   const FAVORITES_KEY = 'cooksmart_favorites';
@@ -51,15 +70,17 @@ export const RecipeProvider: React.FC<RecipeProviderProps> = ({ children }) => {
       const newUid = user?.uid ?? null;
       setUid(newUid);
       if (newUid) {
-     
         loadFavoritesFromFirestore(newUid);
         loadSavedFromFirestore(newUid);
         loadEditedFromFirestore(newUid);
+        loadCookingHistory();
+        loadCookingStats();
       } else {
- 
         loadFavorites();
         loadSavedRecipes();
         loadEditedRecipes();
+        loadCookingHistory();
+        loadCookingStats();
       }
     });
     return unsubscribe;
@@ -95,6 +116,24 @@ export const RecipeProvider: React.FC<RecipeProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error loading edited recipes:', error);
+    }
+  };
+
+  const loadCookingHistory = async () => {
+    try {
+      const history = await CookingHistoryService.getCookingHistory();
+      setCookingHistory(history);
+    } catch (error) {
+      console.error('Error loading cooking history:', error);
+    }
+  };
+
+  const loadCookingStats = async () => {
+    try {
+      const stats = await CookingHistoryService.getCookingStats();
+      setCookingStats(stats);
+    } catch (error) {
+      console.error('Error loading cooking stats:', error);
     }
   };
 
@@ -265,22 +304,78 @@ export const RecipeProvider: React.FC<RecipeProviderProps> = ({ children }) => {
     return editedRecipes.length;
   };
 
+  const addCookingSession = async (session: CookingSession) => {
+    try {
+      await CookingHistoryService.saveCookingSession(session);
+      await loadCookingHistory();
+      await loadCookingStats();
+    } catch (error) {
+      console.error('Error adding cooking session:', error);
+      throw error;
+    }
+  };
+
+  const deleteCookingSession = async (sessionId: string) => {
+    try {
+      await CookingHistoryService.deleteCookingSession(sessionId);
+      await loadCookingHistory();
+      await loadCookingStats();
+    } catch (error) {
+      console.error('Error deleting cooking session:', error);
+      throw error;
+    }
+  };
+
+  const getCookingHistoryCount = () => {
+    return cookingHistory.length;
+  };
+
+  const refreshCookingHistory = async () => {
+    await loadCookingHistory();
+  };
+
+  const refreshCookingStats = async () => {
+    await loadCookingStats();
+  };
+
+  const clearAllCookingHistory = async () => {
+    try {
+      await CookingHistoryService.clearAllHistory();
+      
+     
+      setCookingHistory([]);
+      
+      await loadCookingStats();
+    } catch (error) {
+      console.error('Error clearing cooking history:', error);
+      throw error;
+    }
+  };
+
   const value: RecipeContextType = {
     favorites,
     savedRecipes,
     editedRecipes,
+    cookingHistory,
+    cookingStats,
     addToFavorites,
     removeFromFavorites,
     addToSaved,
     removeFromSaved,
     addEditedRecipe,
     removeEditedRecipe,
+    addCookingSession,
+    deleteCookingSession,
+    clearAllCookingHistory,
     isFavorite,
     isSaved,
     isEdited,
     getFavoritesCount,
     getSavedCount,
     getEditedCount,
+    getCookingHistoryCount,
+    refreshCookingHistory,
+    refreshCookingStats,
   };
 
   return (

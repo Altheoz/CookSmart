@@ -1,13 +1,15 @@
+import { useRecipeContext } from '@/contexts/RecipeContext';
+import { CookingSession } from '@/services/cookingHistoryService';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -16,6 +18,8 @@ export default function RecipeCompletionScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { meal } = route.params;
+  const { addCookingSession } = useRecipeContext();
+  const [sessionSaved, setSessionSaved] = useState(false);
 
   const handleBackToHome = () => {
     navigation.navigate('(tabs)', { screen: 'home' });
@@ -24,6 +28,41 @@ export default function RecipeCompletionScreen() {
   const handleStartNewRecipe = () => {
     navigation.navigate('(tabs)', { screen: 'discover' });
   };
+
+ 
+  useEffect(() => {
+    const saveCookingSession = async () => {
+      if (meal && !sessionSaved) {
+        try {
+          const cookingSession: CookingSession = {
+            id: `${meal.idMeal}_${Date.now()}`,
+            meal: meal,
+            completedAt: new Date(),
+            cookingTime: 30,
+            difficulty: 'Medium',
+            stepsCompleted: 1,
+            totalSteps: 1,
+            ingredientsUsed: [
+              meal.strIngredient1,
+              meal.strIngredient2,
+              meal.strIngredient3,
+              meal.strIngredient4,
+              meal.strIngredient5,
+            ].filter(Boolean),
+            category: meal.strCategory,
+            cuisine: meal.strArea,
+          };
+
+          await addCookingSession(cookingSession);
+          setSessionSaved(true);
+        } catch (error) {
+          console.error('Error saving cooking session:', error);
+        }
+      }
+    };
+
+    saveCookingSession();
+  }, [meal?.idMeal, sessionSaved, addCookingSession]);
 
   return (
     <SafeAreaView style={styles.container}>

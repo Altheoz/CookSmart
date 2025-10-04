@@ -22,6 +22,7 @@ import { Meal } from '@/services/mealApi';
 import DiscoverContent from './discover';
 import FavoriteContent from './favorite';
 import FeaturedContent from './featured';
+import HistoryContent from './history';
 import HomeContent from './home';
 import ProfileContent from './profile';
 
@@ -141,6 +142,7 @@ export default function SavedScreen() {
             screenOptions={{ headerShown: false }}
         >
             <Drawer.Screen name="DrawerSaved" component={SavedContent} />
+            <Drawer.Screen name="DrawerHistory" component={HistoryContent} />
             <Drawer.Screen name="DrawerHome" component={HomeContent} />
             <Drawer.Screen name="DrawerFeatured" component={FeaturedContent} />
             <Drawer.Screen name="DrawerDiscover" component={DiscoverContent} />

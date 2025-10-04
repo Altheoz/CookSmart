@@ -6,16 +6,16 @@ import { router } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Image,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
@@ -23,6 +23,7 @@ import { MealCard } from '@/components/MealCard';
 import { Category, Meal, mealApiService } from '@/services/mealApi';
 import DiscoverContent from './discover';
 import FavoriteContent from './favorite';
+import HistoryContent from './history';
 import HomeContent from './home';
 import ProfileContent from './profile';
 import SavedContent from './saved';
@@ -230,6 +231,7 @@ export default function FeatureScreen() {
       <Drawer.Screen name="DrawerFeatured" component={FeaturedContent} />
 
       <Drawer.Screen name="DrawerHome" component={HomeContent} />
+      <Drawer.Screen name="DrawerHistory" component={HistoryContent} />
       <Drawer.Screen name="DrawerDiscover" component={DiscoverContent} />
       <Drawer.Screen name="DrawerFavorite" component={FavoriteContent} />
       <Drawer.Screen name="DrawerSaved" component={SavedContent} />

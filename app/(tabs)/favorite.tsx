@@ -5,14 +5,14 @@ import { router } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
-    FlatList,
-    Image,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
@@ -21,6 +21,7 @@ import { useRecipeContext } from '@/contexts/RecipeContext';
 import { Meal } from '@/services/mealApi';
 import DiscoverContent from './discover';
 import FeaturedContent from './featured';
+import HistoryContent from './history';
 import HomeContent from './home';
 import ProfileContent from './profile';
 import SavedContent from './saved';
@@ -143,6 +144,7 @@ export default function FavoriteScreen() {
         <Drawer.Screen name="DrawerFavorite" component={FavoriteContent} />
 
     <Drawer.Screen name="DrawerHome" component={HomeContent} />
+    <Drawer.Screen name="DrawerHistory" component={HistoryContent} />
     <Drawer.Screen name="DrawerFeatured" component={FeaturedContent} />
     <Drawer.Screen name="DrawerDiscover" component={DiscoverContent} />
     <Drawer.Screen name="DrawerSaved" component={SavedContent} />
