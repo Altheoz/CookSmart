@@ -2,17 +2,18 @@ import { useRecipeContext } from '@/contexts/RecipeContext';
 import { CookingSession } from '@/services/cookingHistoryService';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
+
 import {
-  Dimensions,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function RecipeCompletionScreen() {
   const navigation = useNavigation<any>();
@@ -66,6 +67,7 @@ export default function RecipeCompletionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
@@ -77,10 +79,14 @@ export default function RecipeCompletionScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.completionCard}>
           <View style={styles.completionIcon}>
-            <Ionicons name="checkmark" size={60} color="white" />
+            <Ionicons name="checkmark" size={40} color="white" />
           </View>
           
           <Text style={styles.completionTitle}>Recipe Completed</Text>
@@ -130,14 +136,9 @@ export default function RecipeCompletionScreen() {
               <Text style={styles.statLabel}>Steps</Text>
               <Text style={styles.statValue}>All Done</Text>
             </View>
-            <View style={styles.statItem}>
-              <Ionicons name="star" size={24} color="#4CAF50" />
-              <Text style={styles.statLabel}>Rating</Text>
-              <Text style={styles.statValue}>Excellent</Text>
-            </View>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -146,6 +147,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E8F5E8',
+    paddingTop: 30,
   },
   header: {
     flexDirection: 'row',
@@ -178,10 +180,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2C3E50',
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 30,
+    paddingBottom: 60,
     alignItems: 'center',
   },
   completionCard: {
@@ -199,8 +204,8 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   completionIcon: {
-    width: 120,
-    height: 120,
+    width: 100,
+    height: 100,
     borderRadius: 60,
     backgroundColor: '#4CAF50',
     justifyContent: 'center',
