@@ -3,18 +3,18 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import * as Speech from 'expo-speech';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Dimensions,
-    PermissionsAndroid,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    Vibration,
-    View
+  Alert,
+  Animated,
+  Dimensions,
+  PermissionsAndroid,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Vibration,
+  View
 } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -57,6 +57,8 @@ export default function CookingInterfaceScreen() {
   const [voiceActivated, setVoiceActivated] = useState(false); 
   
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const voiceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recognitionRef = useRef<any>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -175,6 +177,7 @@ export default function CookingInterfaceScreen() {
       
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
       
       recognition.continuous = false;
       recognition.interimResults = false;
@@ -254,12 +257,25 @@ export default function CookingInterfaceScreen() {
           startListening();
         }
       }, 4000);
+      
+      voiceIntervalRef.current = interval;
 
-      return () => clearInterval(interval);
+      return () => {
+        if (voiceIntervalRef.current) {
+          clearInterval(voiceIntervalRef.current);
+          voiceIntervalRef.current = null;
+        }
+      };
     }
   }, [voiceActivated, isVoiceEnabled, hasPermission, isRecognizing, speaking, lastCommandTime]);
 
   const speakConfirmation = async (message: string) => {
+   
+    stopAllSpeech();
+    
+   
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     try {
       await Speech.speak(message, {
         language: 'en',
@@ -268,6 +284,30 @@ export default function CookingInterfaceScreen() {
       });
     } catch (error) {
       console.error('Confirmation speech error:', error);
+    }
+  };
+
+  const stopAllSpeech = () => {
+    try {
+      Speech.stop();
+      setSpeaking(false);
+    } catch (error) {
+      console.error('Error stopping speech:', error);
+    }
+  };
+
+  const transitionToStep = (newStep: number) => {
+   
+    stopAllSpeech();
+    
+  
+    setCurrentStep(newStep);
+    
+ 
+    if (voiceActivated && cookingSteps[newStep]) {
+      setTimeout(() => {
+        speakInstruction(cookingSteps[newStep].instruction);
+      }, 500);
     }
   };
 
@@ -324,6 +364,9 @@ export default function CookingInterfaceScreen() {
 
   const goToNextStep = () => {
     if (currentStep < cookingSteps.length - 1) {
+     
+      stopAllSpeech();
+      
       setCompletedSteps(prev => new Set([...prev, currentStep]));
       
       Animated.sequence([
@@ -348,22 +391,29 @@ export default function CookingInterfaceScreen() {
         useNativeDriver: false,
       }).start();
       
+     
       if (voiceActivated && cookingSteps[currentStep + 1]) {
-        speakInstruction(cookingSteps[currentStep + 1].instruction);
+        setTimeout(() => {
+          speakInstruction(cookingSteps[currentStep + 1].instruction);
+        }, 500); 
       }
     } else {
       const newCompletedSteps = new Set([...completedSteps, currentStep]);
       if (newCompletedSteps.size === cookingSteps.length) {
         stopVoiceRecognition();
+        stopAllSpeech();
         setTimeout(() => {
           navigation.navigate('RecipeCompletion', { meal });
-        }, 1000);
+        }, 4000); 
       }
     }
   };
 
   const goToPreviousStep = () => {
     if (currentStep > 0) {
+      
+      stopAllSpeech();
+      
       setCompletedSteps(prev => {
         const newSet = new Set(prev);
         newSet.delete(currentStep - 1);
@@ -379,30 +429,55 @@ export default function CookingInterfaceScreen() {
         useNativeDriver: false,
       }).start();
       
+    
       if (voiceActivated && cookingSteps[currentStep - 1]) {
-        speakInstruction(cookingSteps[currentStep - 1].instruction);
+        setTimeout(() => {
+          speakInstruction(cookingSteps[currentStep - 1].instruction);
+        }, 500); 
       }
     }
   };
 
   const stopVoiceRecognition = () => {
+  
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error('Error stopping recognition:', error);
+      }
+      recognitionRef.current = null;
+    }
+    
+   
+    stopAllSpeech();
+    
+   
+    if (voiceIntervalRef.current) {
+      clearInterval(voiceIntervalRef.current);
+      voiceIntervalRef.current = null;
+    }
+    
+    
     setIsVoiceEnabled(false);
     setVoiceActivated(false);
     setIsListening(false);
     setIsRecognizing(false);
     setSpeaking(false);
+    setRecognitionResult('');
   };
 
   const markStepComplete = () => {
     setCompletedSteps(prev => new Set([...prev, currentStep]));
-    speakConfirmation("Step marked as complete");
+    speakConfirmation("Step marked as complete enjoy your meal");
     
     const newCompletedSteps = new Set([...completedSteps, currentStep]);
     if (newCompletedSteps.size === cookingSteps.length) {
       stopVoiceRecognition();
+      stopAllSpeech();
       setTimeout(() => {
         navigation.navigate('RecipeCompletion', { meal });
-      }, 1000); 
+      }, 4000); 
     } else if (currentStep < cookingSteps.length - 1) {
       goToNextStep();
     }
@@ -476,6 +551,12 @@ export default function CookingInterfaceScreen() {
   };
 
   const speakInstruction = async (instruction: string) => {
+    
+    stopAllSpeech();
+    
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     setSpeaking(true);
     setLastCommandTime(Date.now());
     try {
@@ -554,8 +635,31 @@ export default function CookingInterfaceScreen() {
     };
   }, []);
 
+ 
+  useEffect(() => {
+    return () => {
+     
+      stopAllSpeech();
+      
+      
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          console.error('Error stopping recognition on unmount:', error);
+        }
+      }
+      
+     
+      if (voiceIntervalRef.current) {
+        clearInterval(voiceIntervalRef.current);
+      }
+    };
+  }, []);
+
   useFocusEffect(
     React.useCallback(() => {
+     
       return () => {
         stopVoiceRecognition();
       };
@@ -595,7 +699,9 @@ export default function CookingInterfaceScreen() {
       <View style={styles.header}>
         <TouchableOpacity 
           onPress={() => {
+            
             stopVoiceRecognition();
+            stopAllSpeech();
             navigation.goBack();
           }} 
           style={styles.headerButton}
@@ -671,16 +777,18 @@ export default function CookingInterfaceScreen() {
               <Text style={styles.speakButtonText}>Speak Instruction</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.completeButton} 
-              onPress={markStepComplete}
-              disabled={completedSteps.has(currentStep)}
-            >
-              <Ionicons name="checkmark-circle" size={20} color="white" />
-              <Text style={styles.completeButtonText}>
-                {completedSteps.has(currentStep) ? 'Completed' : 'Mark Complete'}
-              </Text>
-            </TouchableOpacity>
+            {currentStep === cookingSteps.length - 1 && (
+              <TouchableOpacity 
+                style={styles.completeButton} 
+                onPress={markStepComplete}
+                disabled={completedSteps.has(currentStep)}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="white" />
+                <Text style={styles.completeButtonText}>
+                  {completedSteps.has(currentStep) ? 'Completed' : 'Mark Complete'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.tipsContainer}>
@@ -803,6 +911,7 @@ export default function CookingInterfaceScreen() {
 const styles = StyleSheet.create({
   container: {
     paddingTop: 30,
+    paddingBottom: 40,
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
