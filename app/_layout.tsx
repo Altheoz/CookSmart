@@ -39,7 +39,7 @@ export default function RootLayout() {
           <Stack.Screen name="OfflineMealDetail" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
-        <StatusBar style="auto" />
+        <StatusBar style="dark" />
       </ThemeProvider>
     </RecipeProvider>
   );
