@@ -16,6 +16,7 @@ import {
   Vibration,
   View
 } from 'react-native';
+import { speechService } from '../services/speechService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -62,6 +63,8 @@ export default function CookingInterfaceScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const DEFAULT_STEP_TIMER_SECONDS = 60;
 
 
   const generateCookingTip = (instruction: string): string => {
@@ -161,63 +164,112 @@ export default function CookingInterfaceScreen() {
     return true;
   };
 
-  const startListening = () => {
-    if (!isVoiceEnabled || isRecognizing || speaking) return;
+  const playListeningCue = async () => {
+    try {
+     
+      Vibration.vibrate(30);
     
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      console.log('Speech recognition not supported, using fallback');
-      simulateVoiceRecognition();
+      await Speech.speak('listening', {
+        language: 'en',
+        pitch: 1.1,
+        rate: 1.1,
+      });
+    } catch (e) {
+   
+    }
+  };
+
+  const startListening = async () => {
+    if (!isVoiceEnabled || isRecognizing) return;
+    
+    if (speaking) {
       return;
     }
     
+    if (Platform.OS === 'web') {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        console.log('Speech recognition not supported on web, using fallback');
+        simulateVoiceRecognition();
+        return;
+      }
+      try {
+     
+        await playListeningCue();
+        setIsRecognizing(true);
+        setIsListening(true);
+        setRecognitionResult('');
+        
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+        
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
+        
+        recognition.onstart = () => {
+          console.log('Speech recognition started');
+        };
+        
+        recognition.onresult = (event: any) => {
+          const command = event.results[0][0].transcript.toLowerCase().trim();
+          console.log('Speech recognition result:', command);
+          setRecognitionResult(command);
+          
+          const now = Date.now();
+          if (now - lastCommandTime > 3000) { 
+            processVoiceCommand(command);
+            setLastCommandTime(now);
+          }
+        };
+        
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          simulateVoiceRecognition();
+        };
+        
+        recognition.onend = () => {
+          setIsRecognizing(false);
+          setIsListening(false);
+          setTimeout(() => {
+            setRecognitionResult('');
+          }, 2000);
+        };
+        
+        recognition.start();
+      } catch (error) {
+        console.error('Speech recognition setup error:', error);
+        simulateVoiceRecognition();
+      }
+      return;
+    }
+    
+   
     try {
+   
+      await playListeningCue();
       setIsRecognizing(true);
       setIsListening(true);
       setRecognitionResult('');
-      
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
-      
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-      recognition.maxAlternatives = 1;
-      
-      recognition.onstart = () => {
-        console.log('Speech recognition started');
-      };
-      
-      recognition.onresult = (event: any) => {
-        const command = event.results[0][0].transcript.toLowerCase().trim();
-        console.log('Speech recognition result:', command);
+      const result = await speechService.transcribeOnce();
+      const command = (result?.text || '').toLowerCase().trim();
+      if (command) {
         setRecognitionResult(command);
-        
         const now = Date.now();
-        if (now - lastCommandTime > 3000) { 
+        if (now - lastCommandTime > 3000) {
           processVoiceCommand(command);
           setLastCommandTime(now);
         }
-      };
-      
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        
-        simulateVoiceRecognition();
-      };
-      
-      recognition.onend = () => {
-        setIsRecognizing(false);
-        setIsListening(false);
-        setTimeout(() => {
-          setRecognitionResult('');
-        }, 2000);
-      };
-      
-      recognition.start();
-    } catch (error) {
-      console.error('Speech recognition setup error:', error);
-      simulateVoiceRecognition();
+      }
+    } catch (e) {
+      console.error('Native transcription error:', e);
+    } finally {
+      setIsRecognizing(false);
+      setIsListening(false);
+      setTimeout(() => {
+        setRecognitionResult('');
+      }, 2000);
     }
   };
 
@@ -317,8 +369,8 @@ export default function CookingInterfaceScreen() {
     
     const nextKeywords = ['next', 'next step', 'forward', 'continue', 'proceed', 'go next'];
     const prevKeywords = ['previous', 'previous step', 'back', 'go back', 'return', 'last step'];
-    const pauseKeywords = ['pause', 'stop', 'halt', 'wait'];
-    const resumeKeywords = ['resume', 'play', 'continue', 'start', 'go'];
+    const pauseKeywords = ['pause', 'boss', 'stop', 'halt', 'wait'];
+    const resumeKeywords = ['resume', 'play', 'start', 'go'];
     const timerStartKeywords = ['start timer', 'timer start', 'begin timer', 'start the timer'];
     const timerStopKeywords = ['stop timer', 'timer stop', 'end timer', 'stop the timer'];
     const repeatKeywords = ['repeat', 'say again', 'read again', 'replay'];
@@ -326,7 +378,26 @@ export default function CookingInterfaceScreen() {
     const voiceOffKeywords = ['voice off', 'stop listening', 'disable voice', 'turn off voice'];
     const voiceOnKeywords = ['voice on', 'start listening', 'enable voice', 'turn on voice'];
     
-    if (nextKeywords.some(keyword => lowerCommand.includes(keyword))) {
+    
+    if (lowerCommand.includes('continue')) {
+      if (!isPlaying && timerActive) {
+        togglePause();
+        speakConfirmation("Okay, resuming");
+      } else {
+        goToNextStep();
+        speakConfirmation("Okay, going to next step");
+      }
+      return;
+    }
+
+    
+    if (timerStartKeywords.some(keyword => lowerCommand.includes(keyword))) {
+      startTimer();
+      speakConfirmation("Okay, starting timer");
+    } else if (timerStopKeywords.some(keyword => lowerCommand.includes(keyword))) {
+      stopTimer();
+      speakConfirmation("Okay, stopping timer");
+    } else if (nextKeywords.some(keyword => lowerCommand.includes(keyword))) {
       goToNextStep();
       speakConfirmation("Okay, going to next step");
     } else if (prevKeywords.some(keyword => lowerCommand.includes(keyword))) {
@@ -338,12 +409,6 @@ export default function CookingInterfaceScreen() {
     } else if (resumeKeywords.some(keyword => lowerCommand.includes(keyword))) {
       togglePause();
       speakConfirmation("Okay, resuming");
-    } else if (timerStartKeywords.some(keyword => lowerCommand.includes(keyword))) {
-      startTimer();
-      speakConfirmation("Okay, starting timer");
-    } else if (timerStopKeywords.some(keyword => lowerCommand.includes(keyword))) {
-      stopTimer();
-      speakConfirmation("Okay, stopping timer");
     } else if (repeatKeywords.some(keyword => lowerCommand.includes(keyword))) {
       speakInstruction(currentStepData?.instruction || '');
       speakConfirmation("Okay, repeating instruction");
@@ -484,6 +549,11 @@ export default function CookingInterfaceScreen() {
   };
 
   const togglePause = () => {
+    if (!timerActive && timeRemaining <= 0) {
+     
+      startTimer();
+      return;
+    }
     setIsPlaying(!isPlaying);
     if (timerActive) {
       if (isPlaying) {
@@ -496,40 +566,43 @@ export default function CookingInterfaceScreen() {
 
   const startTimer = () => {
     const currentStepData = cookingSteps[currentStep];
-    if (currentStepData.timer) {
-      setTimeRemaining(currentStepData.timer);
-      setTimerActive(true);
-      setIsPlaying(true);
-      
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulse.start();
-      
-      timerRef.current = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            Vibration.vibrate([0, 500, 200, 500]);
-            stopTimer();
-            speakConfirmation("Timer complete! Moving to next step");
-            goToNextStep();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    const duration = currentStepData.timer || (timeRemaining > 0 ? timeRemaining : DEFAULT_STEP_TIMER_SECONDS);
+
+    setTimeRemaining(duration);
+    setTimerActive(true);
+    setIsPlaying(true);
+
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
+    timerRef.current = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          Vibration.vibrate([0, 500, 200, 500]);
+          stopTimer();
+          speakConfirmation("Timer complete! Moving to next step");
+          goToNextStep();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   const stopTimer = () => {
@@ -545,29 +618,33 @@ export default function CookingInterfaceScreen() {
   const resetTimer = () => {
     stopTimer();
     const currentStepData = cookingSteps[currentStep];
-    if (currentStepData.timer) {
-      setTimeRemaining(currentStepData.timer);
-    }
+    const duration = currentStepData.timer || DEFAULT_STEP_TIMER_SECONDS;
+    setTimeRemaining(duration);
   };
 
   const speakInstruction = async (instruction: string) => {
-    
     stopAllSpeech();
-    
-    
     await new Promise(resolve => setTimeout(resolve, 100));
-    
     setSpeaking(true);
     setLastCommandTime(Date.now());
     try {
-      await Speech.speak(instruction, {
+      Speech.speak(instruction, {
         language: 'en',
         pitch: 1.0,
         rate: 0.8,
-      });
+        onDone: () => {
+          setSpeaking(false);
+          setLastCommandTime(Date.now());
+        },
+        onStopped: () => {
+          setSpeaking(false);
+        },
+        onError: () => {
+          setSpeaking(false);
+        }
+      } as any);
     } catch (error) {
       console.error('Speech error:', error);
-    } finally {
       setSpeaking(false);
     }
   };
@@ -810,7 +887,7 @@ export default function CookingInterfaceScreen() {
           </View>
         </Animated.View>
 
-        {currentStepData?.timer && (
+        {(currentStepData?.timer || timerActive || timeRemaining > 0) && (
           <View style={styles.timerCard}>
             <View style={styles.timerHeader}>
               <Ionicons name="timer" size={20} color="#4CAF50" />

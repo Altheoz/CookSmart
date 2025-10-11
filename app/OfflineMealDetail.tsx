@@ -118,12 +118,6 @@ export default function OfflineMealDetailScreen() {
                                 <Ionicons name="time-outline" size={14} color="#111" />
                                 <Text style={styles.chipText}>{cookingTime} min</Text>
                             </View>
-                            <View style={styles.chip}>
-                                <Ionicons name="people-outline" size={14} color="#111" />
-                                <Text style={styles.chipText}>
-                                    {meal.nutritionalInfo?.servings || 4} servings
-                                </Text>
-                            </View>
                             {(() => {
                                 const difficultyColors = {
                                     Easy: { bg: '#E8F5E8', text: '#2E7D32', border: '#4CAF50' },

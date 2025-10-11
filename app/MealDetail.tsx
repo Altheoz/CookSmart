@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import { useRecipeContext } from '@/contexts/RecipeContext';
@@ -273,12 +273,6 @@ export default function MealDetailScreen() {
               <View style={styles.chip}>
                 <Ionicons name="time-outline" size={14} color="#111" />
                 <Text style={styles.chipText}>{cookingTime} min</Text>
-              </View>
-              <View style={styles.chip}>
-                <Ionicons name="people-outline" size={14} color="#111" />
-                <Text style={styles.chipText}>
-                  {nutritionalInfo?.servings || 4} servings
-                </Text>
               </View>
               {(() => {
                 const difficultyColors = {

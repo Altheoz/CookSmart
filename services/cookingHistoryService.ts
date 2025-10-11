@@ -34,6 +34,34 @@ export class CookingHistoryService {
   private static readonly STATS_KEY = 'cooksmart_cooking_stats';
 
  
+  private static removeUndefinedDeep<T>(value: T): T {
+    if (value === null) return value;
+   
+    if (value instanceof Date) return value;
+  
+    if (Array.isArray(value)) {
+      const cleanedArray = (value as unknown as any[])
+        .map((item) => this.removeUndefinedDeep(item))
+        .filter((item) => item !== undefined);
+      return cleanedArray as unknown as T;
+    }
+   
+    if (typeof value === 'object') {
+      const result: Record<string, any> = {};
+      Object.entries(value as Record<string, any>).forEach(([key, val]) => {
+        if (val === undefined) return;
+        const cleaned = this.removeUndefinedDeep(val);
+        if (cleaned !== undefined) {
+          result[key] = cleaned;
+        }
+      });
+      return result as unknown as T;
+    }
+   
+    return value;
+  }
+
+ 
   private static getCurrentUid(): string | null {
     return auth.currentUser?.uid || null;
   }
@@ -62,18 +90,19 @@ export class CookingHistoryService {
       }
       
      
-      const updatedHistory = [session, ...existingHistory];
+      const sanitizedSession = this.removeUndefinedDeep<CookingSession>(session);
+      const updatedHistory = [sanitizedSession, ...existingHistory];
       await AsyncStorage.setItem(this.HISTORY_KEY, JSON.stringify(updatedHistory));
 
      
       if (uid) {
-        await setDoc(doc(this.historyCollectionRef(uid), session.id), {
-          ...session,
-          completedAt: session.completedAt,
+        await setDoc(doc(this.historyCollectionRef(uid), sanitizedSession.id), {
+          ...sanitizedSession,
+          completedAt: sanitizedSession.completedAt,
         });
         
        
-        await this.updateCookingStats(session);
+        await this.updateCookingStats(sanitizedSession);
       }
     } catch (error) {
       console.error('Error saving cooking session:', error);
