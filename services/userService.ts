@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
+import { createUserWithEmailAndPassword, deleteUser, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from '../FirebaseConfig';
@@ -9,6 +9,7 @@ export interface UserData {
   email: string;
   role: 'user' | 'admin' | 'super_admin';
   createdAt: Date;
+  emailVerified?: boolean;
 }
 
 export class UserService {
@@ -17,11 +18,15 @@ export class UserService {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
+   
+      await sendEmailVerification(user);
+      
       const userData: UserData = {
         uid: user.uid,
         email: user.email!,
         role,
-        createdAt: new Date()
+        createdAt: new Date(),
+        emailVerified: user.emailVerified
       };
       
       await setDoc(doc(db, 'users', user.uid), userData);
@@ -227,6 +232,75 @@ export class UserService {
       };
     } catch (error) {
       console.error('Error getting user stats:', error);
+      throw error;
+    }
+  }
+
+  
+  static async sendEmailVerification(): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('No user is currently signed in');
+      }
+      
+      if (user.emailVerified) {
+        throw new Error('Email is already verified');
+      }
+      
+      await sendEmailVerification(user);
+    } catch (error) {
+      console.error('Error sending email verification:', error);
+      throw error;
+    }
+  }
+
+  static async resendEmailVerification(): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('No user is currently signed in');
+      }
+      
+      await sendEmailVerification(user);
+    } catch (error) {
+      console.error('Error resending email verification:', error);
+      throw error;
+    }
+  }
+
+  static async sendPasswordResetEmail(email: string): Promise<void> {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      throw error;
+    }
+  }
+
+  static isEmailVerified(): boolean {
+    const user = auth.currentUser;
+    return user ? user.emailVerified : false;
+  }
+
+  static async refreshUserData(): Promise<UserData | null> {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        return null;
+      }
+      
+   
+      await user.reload();
+      
+     
+      await updateDoc(doc(db, 'users', user.uid), {
+        emailVerified: user.emailVerified
+      });
+      
+      return await this.getUserData(user.uid);
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
       throw error;
     }
   }

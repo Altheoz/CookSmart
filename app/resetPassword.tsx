@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { sendPasswordResetEmail } from 'firebase/auth';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -11,8 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { auth } from '../FirebaseConfig';
+import { UserService } from '../services/userService';
 import './global.css';
+
 
 const ResetPassword = () => {
   const [email, setEmail] = useState('');
@@ -50,7 +50,7 @@ const ResetPassword = () => {
 
     setIsLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await UserService.sendPasswordResetEmail(email);
       Alert.alert(
         'Reset Link Sent',
         'Password reset link has been sent to your email. Please check your inbox and spam folder.',

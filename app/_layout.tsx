@@ -37,6 +37,7 @@ export default function RootLayout() {
           <Stack.Screen name="TermsAndConditions" options={{ headerShown: false }} />
           <Stack.Screen name="OfflineRecipes" options={{ headerShown: false }} />
           <Stack.Screen name="OfflineMealDetail" options={{ headerShown: false }} />
+          <Stack.Screen name="EmailVerification" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="dark" />

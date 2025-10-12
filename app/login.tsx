@@ -34,7 +34,13 @@ const Login = () => {
       if (user) {
         try {
           const userData = await UserService.getUserData(user.uid);
-          if (userData?.role === 'admin') {
+          
+          if (!user.emailVerified) {
+            router.replace('/EmailVerification');
+            return;
+          }
+          
+          if (userData?.role === 'admin' || userData?.role === 'super_admin') {
             router.replace('/admin-dashboard');
           } else {
             router.replace('/(tabs)/home');
@@ -175,6 +181,12 @@ const Login = () => {
           await AsyncStorage.removeItem('rememberMe');
         }
         
+        
+        
+        if (!userCredential.user.emailVerified) {
+          router.replace('/EmailVerification');
+          return;
+        }
         
         try {
           const userData = await UserService.getUserData(userCredential.user.uid);

@@ -113,7 +113,8 @@ const Signup = () => {
     setIsLoading(true);
     try {
       const userData = await UserService.createUser(email, password, 'user');
-      router.replace('/(tabs)/home');
+      
+      router.replace('/EmailVerification');
     } catch (error: any) {
       console.log(error);
       if (error.code === 'auth/email-already-in-use') {

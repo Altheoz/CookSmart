@@ -3,25 +3,25 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import {
-    EmailAuthProvider,
-    getAuth,
-    reauthenticateWithCredential,
-    signOut,
-    updatePassword,
+  EmailAuthProvider,
+  getAuth,
+  reauthenticateWithCredential,
+  signOut,
+  updatePassword,
 } from 'firebase/auth';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { UserService } from '../../services/userService';
 
@@ -81,6 +81,7 @@ export default function ProfileContent() {
   const [isReauthing, setIsReauthing] = useState(false);
   const [deletePasswordError, setDeletePasswordError] = useState(false);
   const [reauthPasswordError, setReauthPasswordError] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
 
   useEffect(() => {
     const loadAvatar = async () => {
@@ -219,6 +220,27 @@ export default function ProfileContent() {
     }
   };
 
+  const handleResendVerification = async () => {
+    try {
+      setIsResendingVerification(true);
+      await UserService.resendEmailVerification();
+      Alert.alert(
+        'Verification Email Sent',
+        'A new verification email has been sent to your email address. Please check your inbox and spam folder.',
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('Error resending verification:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to resend verification email. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       
@@ -274,11 +296,56 @@ export default function ProfileContent() {
             <Text className="text-white/90 text-base text-center mb-3">
               Manage your account settings and preferences
             </Text>
-            <View className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+            <View className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-2">
               <Text className="text-white font-medium text-sm">
                 {user?.email}
               </Text>
             </View>
+            
+            
+            <View className={`backdrop-blur-sm rounded-full px-4 py-2 ${
+              user?.emailVerified ? 'bg-green-500/30' : 'bg-yellow-500/30'
+            }`}>
+              <View className="flex-row items-center">
+                <Ionicons 
+                  name={user?.emailVerified ? 'checkmark-circle' : 'warning'} 
+                  size={16} 
+                  color="white" 
+                />
+                <Text className="text-white font-medium text-sm ml-2">
+                  {user?.emailVerified ? 'Email Verified' : 'Email Not Verified'}
+                </Text>
+              </View>
+            </View>
+            
+           
+            {!user?.emailVerified && (
+              <TouchableOpacity
+                onPress={handleResendVerification}
+                disabled={isResendingVerification}
+                style={{
+                  backgroundColor: isResendingVerification ? '#9CA3AF' : '#3B82F6',
+                  borderRadius: 12,
+                  paddingVertical: 12,
+                  paddingHorizontal: 20,
+                  marginTop: 12,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                {isResendingVerification ? (
+                  <View className="flex-row justify-center items-center">
+                    <ActivityIndicator color="#fff" size="small" />
+                    <Text className="text-white text-center font-semibold ml-2">Sending...</Text>
+                  </View>
+                ) : (
+                  <Text className="text-white text-center font-semibold">Resend Verification Email</Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
