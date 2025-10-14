@@ -15,8 +15,7 @@ export default function TabLayout() {
       style={{
         flex: 1,
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 40,
-        paddingBottom: 40,
-        backgroundColor: '#fff', 
+       
       }}
     >
       <Tabs

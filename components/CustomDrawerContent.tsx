@@ -38,7 +38,6 @@ export default function CustomDrawerContent(props: any) {
     { label: 'History', lib: 'ion', name: 'time-outline', route: 'DrawerHistory' },
     { label: 'Favorites', lib: 'fa', name: 'heart', route: 'DrawerFavorite', count: getFavoritesCount() },
     { label: 'Recipes Saved', lib: 'ion', name: 'bookmark', route: 'DrawerSaved', count: getSavedCount() },
-    { label: 'Offline Recipes', lib: 'ion', name: 'cloud-offline', route: 'OfflineRecipes', count: getSavedCount() },
   ];
 
   const currentRoute = props.state.routeNames[props.state.index];
@@ -195,6 +194,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#f97316', 
+    paddingBottom: 40,
   },
   profileRow: {
     flexDirection: 'row',

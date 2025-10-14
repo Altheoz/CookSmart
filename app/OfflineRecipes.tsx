@@ -191,6 +191,7 @@ export default function OfflineRecipesScreen() {
                 <TextInput
                     style={styles.searchInput}
                     placeholder="Search saved recipes"
+                    placeholderTextColor="#999"
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                 />

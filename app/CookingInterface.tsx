@@ -988,7 +988,7 @@ export default function CookingInterfaceScreen() {
 const styles = StyleSheet.create({
   container: {
     paddingTop: 30,
-    paddingBottom: 40,
+    marginBottom: 40,
     flex: 1,
     backgroundColor: '#F8F9FA',
   },

@@ -162,7 +162,7 @@ const EmailVerification = () => {
             {isResending ? (
               <ActivityIndicator color="#F9761A" size="small" />
             ) : (
-              <Text style={styles.resendButtonText}>Resend Verification Email</Text>
+              <Text style={styles.resendButtonText}>Resend Verification Link</Text>
             )}
           </TouchableOpacity>
         </View>

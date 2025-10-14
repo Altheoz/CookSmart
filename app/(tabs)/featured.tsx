@@ -159,6 +159,7 @@ function FeaturedContent() {
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search featured recipes"
+                placeholderTextColor="#999"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -322,6 +323,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 24,
     gap: 8,
+    
   },
   emptyText: {
     fontSize: 16,

@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingEnd: 20,
     paddingStart: 20,
-    paddingBottom: 45,
+    paddingBottom: 65,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e9ecef',

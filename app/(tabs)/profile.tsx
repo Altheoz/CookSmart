@@ -342,7 +342,7 @@ export default function ProfileContent() {
                     <Text className="text-white text-center font-semibold ml-2">Sending...</Text>
                   </View>
                 ) : (
-                  <Text className="text-white text-center font-semibold">Resend Verification Email</Text>
+                  <Text className="text-white text-center font-semibold">Resend Verification Link</Text>
                 )}
               </TouchableOpacity>
             )}

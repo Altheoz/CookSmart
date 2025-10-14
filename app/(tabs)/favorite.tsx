@@ -87,6 +87,7 @@ function FavoriteContent() {
         <TextInput
           style={styles.searchInput}
           placeholder="Search favorites"
+          placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
