@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   mealsList: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 40,
   },
   emptyState: {
     flex: 1,

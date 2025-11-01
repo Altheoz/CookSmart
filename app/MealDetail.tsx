@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 import { useRecipeContext } from '@/contexts/RecipeContext';
@@ -206,11 +206,52 @@ export default function MealDetailScreen() {
   };
   
   const rawInstructions = typeof currentMeal?.strInstructions === 'string' ? currentMeal.strInstructions : '';
-  const instructions: string[] = rawInstructions
-    .replace(/\r\n/g, '\n')
-    .split(/\n+|(?<=\.)\s+(?=[A-Z])/)
-    .map((instruction: string) => instruction.trim())
-    .filter((text: string) => Boolean(text));
+  
+  
+  const parseInstructions = (instructions: string): string[] => {
+    if (!instructions) return [];
+    
+   
+    let cleaned = instructions
+      .replace(/\r\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n') 
+      .trim();
+    
+    
+    const hasNumberedSteps = /^\d+\.\s+[A-Z]/.test(cleaned) || /\n\d+\.\s+[A-Z]/.test(cleaned);
+    
+    if (hasNumberedSteps) {
+      
+      return cleaned
+        .split(/\n\s*\n/) 
+        .map((instruction: string) => instruction.trim())
+        .filter((text: string) => Boolean(text))
+        .flatMap((instruction: string) => {
+          
+          if (instruction.match(/^\d+\./)) {
+            return instruction.split(/(?=^\d+\.)/m)
+              .map((step: string) => step.trim())
+              .filter((text: string) => Boolean(text));
+          }
+          return [instruction];
+        });
+    } else {
+    
+      return cleaned
+        .split(/(?<=\.)\s+(?=[A-Z])|\n+/)
+        .map((instruction: string) => instruction.trim())
+        .filter((text: string) => Boolean(text) && text.length > 10) 
+        .map((instruction: string, index: number) => {
+          
+          if (!instruction.match(/^\d+\./)) {
+            return `${index + 1}. ${instruction}`;
+          }
+          return instruction;
+        });
+    }
+  };
+  
+  const instructions: string[] = parseInstructions(rawInstructions);
 
   const filteredInstructions = React.useMemo(() => {
     if (!searchQuery.trim()) return instructions;
@@ -233,12 +274,22 @@ export default function MealDetailScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.heroContainer}>
-          <Image 
-            source={{ uri: currentMeal.strMealThumb }} 
-            style={styles.recipeImage}
-            onError={(error) => console.log('Image load error:', error)}
-            onLoad={() => console.log('Image loaded successfully')}
-          />
+          {currentMeal.isAIGenerated ? (
+            <View style={[styles.recipeImage, styles.aiImageContainer]}>
+
+              <View style={styles.aiIconContainer}>
+                
+                <Ionicons name="sparkles" size={60} color="white" />
+              </View>
+            </View>
+          ) : (
+            <Image 
+              source={{ uri: currentMeal.strMealThumb }} 
+              style={styles.recipeImage}
+              onError={(error) => console.log('Image load error:', error)}
+              onLoad={() => console.log('Image loaded successfully')}
+            />
+          )}
           <View style={styles.imageOverlay} />
 
           <View style={styles.topControls}>
@@ -565,6 +616,30 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 300,
     resizeMode: 'cover',
+  },
+  aiImageContainer: {
+    backgroundColor: '#F8F9FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  aiIconContainer: {
+    backgroundColor: '#FF6B35',
+    borderRadius: 60,
+    padding: 30,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
+    marginBottom: 16,
+  },
+  aiGeneratedText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   imageOverlay: {
     position: 'absolute',

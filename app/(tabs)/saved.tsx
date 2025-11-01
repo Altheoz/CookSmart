@@ -157,6 +157,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+  
     },
     bgBlobTop: {
         position: 'absolute',
@@ -261,7 +262,8 @@ const styles = StyleSheet.create({
     },
     mealsList: {
         paddingHorizontal: 16,
-        paddingBottom: 20,
+        paddingBottom: 40,
+   
     },
     emptyState: {
         flex: 1,

@@ -12,6 +12,7 @@ interface MealCardProps {
   showRemoveButton?: boolean;
   onRemove?: (mealId: string) => void;
   style?: any;
+  isAIGenerated?: boolean;
 }
 
 export const MealCard: React.FC<MealCardProps> = ({
@@ -22,7 +23,10 @@ export const MealCard: React.FC<MealCardProps> = ({
   showRemoveButton = false,
   onRemove,
   style,
+  isAIGenerated,
 }) => {
+  
+  const isAIGeneratedMeal = isAIGenerated !== undefined ? isAIGenerated : meal.isAIGenerated === true;
   const { isFavorite, addToFavorites, removeFromFavorites } = useRecipeContext();
   
   const cookingTime = React.useMemo(() => mealApiService.getEstimatedCookingTime(meal), [meal.idMeal, meal.strInstructions]);
@@ -61,14 +65,47 @@ export const MealCard: React.FC<MealCardProps> = ({
       onPress={() => onPress?.(meal)}
       activeOpacity={0.85}
     >
-      <Image
-        source={{ uri: meal.strMealThumb }}
-        style={{
+      {isAIGeneratedMeal ? (
+        <View style={{
           width: '100%',
           height: 180,
-          resizeMode: 'cover',
-        }}
-      />
+          backgroundColor: '#F8F9FA',
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderBottomWidth: 1,
+          borderBottomColor: '#E5E7EB',
+        }}>
+          <View style={{
+            backgroundColor: '#FF6B35',
+            borderRadius: 50,
+            padding: 20,
+            shadowColor: '#FF6B35',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+          }}>
+            <Ionicons name="sparkles" size={40} color="white" />
+          </View>
+          <Text style={{
+            marginTop: 12,
+            fontSize: 12,
+            color: '#6B7280',
+            fontWeight: '600',
+          }}>
+            AI Generated
+          </Text>
+        </View>
+      ) : (
+        <Image
+          source={{ uri: meal.strMealThumb }}
+          style={{
+            width: '100%',
+            height: 180,
+            resizeMode: 'cover',
+          }}
+        />
+      )}
       
       <View style={{ padding: 12 }}>
         <Text

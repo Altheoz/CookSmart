@@ -9,6 +9,7 @@ import {
   Animated,
   FlatList,
   Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -82,18 +83,30 @@ function DiscoverContent() {
   };
 
   const handleGenerateRecipes = async () => {
+  
+    if (!searchQuery.trim()) {
+      Alert.alert('Description Required', 'Please describe the recipe you want to create before discovering recipes.');
+      return;
+    }
+
     setLoading(true);
     try {
       const generated = await aiService.generateAsianRecipes({
         query: [searchQuery, selectedDietary.length ? `Dietary: ${selectedDietary.join(', ')}` : ''].filter(Boolean).join(' | '),
         categories: selectedCategories,
         cuisine: selectedCuisine,
-        maxResults: 12,
+        maxResults: 4, 
       });
 
       setGeneratedMeals(generated);
       if (generated.length === 0) {
         Alert.alert('No results', 'Try different categories or difficulty. Only Asian cuisines are included.');
+      } else {
+        
+        setSearchQuery('');
+        setSelectedCategories([]);
+        setSelectedCuisine('');
+        setSelectedDietary([]);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to generate recipes. Please try again.');
@@ -213,6 +226,31 @@ function DiscoverContent() {
           </View>
         )}
       </ScrollView>
+
+  
+      <Modal
+        visible={loading}
+        transparent={true}
+        animationType="fade"
+        statusBarTranslucent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.loadingContainer}>
+              <View style={styles.aiIconContainer}>
+                <Ionicons name="sparkles" size={40} color="#FF6B35" />
+              </View>
+              <Text style={styles.loadingTitle}>Discovering Recipes</Text>
+              <Text style={styles.loadingSubtitle}>AI is creating personalized recipes for you...</Text>
+              <View style={styles.loadingDots}>
+                <View style={[styles.dot, styles.dot1]} />
+                <View style={[styles.dot, styles.dot2]} />
+                <View style={[styles.dot, styles.dot3]} />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -527,5 +565,69 @@ const styles = StyleSheet.create({
   },
   resultsList: {
     paddingBottom: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+    marginHorizontal: 20,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+  },
+  aiIconContainer: {
+    backgroundColor: '#FFF4EB',
+    borderRadius: 50,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  loadingTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111',
+    marginBottom: 8,
+  },
+  loadingSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  loadingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF6B35',
+    marginHorizontal: 4,
+  },
+  dot1: {
+    opacity: 0.6,
+  },
+  dot2: {
+    opacity: 0.8,
+  },
+  dot3: {
+    opacity: 1,
   },
 });

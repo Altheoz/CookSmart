@@ -79,6 +79,8 @@ export interface Meal {
     lastUpdated: string;
     hasCompleteData: boolean;
   };
+  
+  isAIGenerated?: boolean;
 }
 
 export interface MealResponse {

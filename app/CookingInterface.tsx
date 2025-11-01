@@ -106,11 +106,52 @@ export default function CookingInterfaceScreen() {
 
   const cookingSteps: CookingStep[] = React.useMemo(() => {
     const rawInstructions = typeof meal?.strInstructions === 'string' ? meal.strInstructions : '';
-    const instructions = rawInstructions
-      .replace(/\r\n/g, '\n')
-      .split(/\n+|(?<=\.)\s+(?=[A-Z])/)
-      .map((instruction: string) => instruction.trim())
-      .filter(Boolean);
+    
+    
+    const parseInstructions = (instructions: string): string[] => {
+      if (!instructions) return [];
+      
+     
+      let cleaned = instructions
+        .replace(/\r\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n') 
+        .trim();
+      
+     
+      const hasNumberedSteps = /^\d+\.\s+[A-Z]/.test(cleaned) || /\n\d+\.\s+[A-Z]/.test(cleaned);
+      
+      if (hasNumberedSteps) {
+        
+        return cleaned
+          .split(/\n\s*\n/) 
+          .map((instruction: string) => instruction.trim())
+          .filter((text: string) => Boolean(text))
+          .flatMap((instruction: string) => {
+           
+            if (instruction.match(/^\d+\./)) {
+              return instruction.split(/(?=^\d+\.)/m)
+                .map((step: string) => step.trim())
+                .filter((text: string) => Boolean(text));
+            }
+            return [instruction];
+          });
+      } else {
+        
+        return cleaned
+          .split(/(?<=\.)\s+(?=[A-Z])|\n+/)
+          .map((instruction: string) => instruction.trim())
+          .filter((text: string) => Boolean(text) && text.length > 10) 
+          .map((instruction: string, index: number) => {
+            
+            if (!instruction.match(/^\d+\./)) {
+              return `${index + 1}. ${instruction}`;
+            }
+            return instruction;
+          });
+      }
+    };
+    
+    const instructions = parseInstructions(rawInstructions);
 
     return instructions.map((instruction: string, index: number) => {
       const timerMatch = instruction.match(/(\d+)\s*(minute|min|hour|hr|second|sec)/i);
@@ -988,7 +1029,7 @@ export default function CookingInterfaceScreen() {
 const styles = StyleSheet.create({
   container: {
     paddingTop: 30,
-    marginBottom: 40,
+    
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
@@ -1337,6 +1378,7 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     marginVertical: 8,
+    marginBottom: 50,
     shadowColor: '#4CAF50',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

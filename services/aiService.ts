@@ -75,7 +75,9 @@ export const aiService = {
       `- Variation focus: ${randomVariation}\n` +
       `- IMPORTANT: If user searches for a specific dish (like "adobo"), generate DIFFERENT variations of that same dish each time - different ingredients, cooking methods, regional styles, or preparation techniques. Make each recipe unique while staying true to the dish.\n` +
       `- Include: title, description, cuisine_type (one of: chinese, japanese, korean, thai, vietnamese, filipino, indian, malaysian), ` +
-      `difficulty_level (beginner|intermediate|advanced), total_time, ingredients (item, amount), instructions (step, instruction), tags.\n` +
+      `difficulty_level (beginner|intermediate|advanced), total_time, ingredients (array of objects with "quantity" and "ingredient" fields), instructions (array of objects with "step" and "instruction" fields), tags.\n` +
+      `- CRITICAL: For ingredients, use format: [{"quantity": "1 cup", "ingredient": "rice"}, {"quantity": "2 tbsp", "ingredient": "soy sauce"}]\n` +
+      `- CRITICAL: For instructions, use format: [{"step": 1, "instruction": "Detailed step description with cooking techniques and timing"}, {"step": 2, "instruction": "Next step with specific details"}]\n` +
       `- Return JSON object with key "recipes" as an array. No extra commentary.`;
 
     const body = {
@@ -143,37 +145,102 @@ export const aiService = {
           return map[String(cuisine).toLowerCase()] || 'Asian';
         })();
 
+        
         const instr = Array.isArray(recipe.instructions)
           ? recipe.instructions
-              .map((s: any) => `${s.step ? `${s.step}. ` : ''}${s.instruction || ''}`)
-              .join('\n')
+              .map((s: any, idx: number) => {
+                const stepNum = s.step || (idx + 1);
+                const instruction = s.instruction || s;
+                return `${stepNum}. ${instruction}`;
+              })
+              .join('\n\n')
           : recipe.instructions || '';
 
-        const fallbackImages: string[] = [
-          'https://images.unsplash.com/photo-1604908176633-0504a9c10a8d?auto=format&fit=crop&w=800&q=80', // Asian food
-          'https://images.unsplash.com/photo-1585238342028-4bbc1f05fa39?auto=format&fit=crop&w=800&q=80', // Chinese food
-          'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=800&q=80', // Sushi
-          'https://images.unsplash.com/photo-1606788075761-9c3ce29562c1?auto=format&fit=crop&w=800&q=80', // Curry
-        ];
-
-        const imageUrl =
-          typeof recipe.image_url === 'string' && recipe.image_url.startsWith('http')
-            ? recipe.image_url
-            : fallbackImages[index % fallbackImages.length];
-
-        return {
+       
+        const meal: any = {
           idMeal: id,
           strMeal: recipe.title || 'AI Recipe',
           strCategory: categories[0] || 'Misc',
           strArea: area,
           strInstructions: instr,
-          strMealThumb: imageUrl
-        } as Meal;
+          strMealThumb: typeof recipe.image_url === 'string' && recipe.image_url.startsWith('http')
+            ? recipe.image_url
+            : [
+                'https://images.unsplash.com/photo-1604908176633-0504a9c10a8d?auto=format&fit=crop&w=800&q=80',
+                'https://images.unsplash.com/photo-1585238342028-4bbc1f05fa39?auto=format&fit=crop&w=800&q=80',
+                'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=800&q=80',
+                'https://images.unsplash.com/photo-1606788075761-9c3ce29562c1?auto=format&fit=crop&w=800&q=80',
+              ][index % 4],
+          isAIGenerated: true
+        };
+
+      
+        if (Array.isArray(recipe.ingredients)) {
+          recipe.ingredients.forEach((ingredient: any, idx: number) => {
+            if (idx < 20) { 
+              const ingredientNum = idx + 1;
+              if (typeof ingredient === 'string') {
+                
+                const parts = ingredient.split(/\s+(.+)/);
+                if (parts.length >= 2) {
+                  meal[`strMeasure${ingredientNum}`] = parts[0].trim();
+                  meal[`strIngredient${ingredientNum}`] = parts[1].trim();
+                } else {
+                  meal[`strIngredient${ingredientNum}`] = ingredient.trim();
+                  meal[`strMeasure${ingredientNum}`] = '';
+                }
+              } else if (ingredient && typeof ingredient === 'object') {
+              
+                meal[`strMeasure${ingredientNum}`] = ingredient.quantity || ingredient.measure || '';
+                meal[`strIngredient${ingredientNum}`] = ingredient.name || ingredient.ingredient || '';
+              }
+            }
+          });
+        }
+
+        return meal as Meal;
       };
 
       const meals = recipes.slice(0, maxResults).map(toMeal);
 
-      return meals;
+      
+      const mealsWithNutrition = await Promise.all(
+        meals.map(async (meal) => {
+          try {
+            const nutritionalInfo = await this.analyzeNutritionalInfo({ meal });
+            return {
+              ...meal,
+              nutritionalInfo: nutritionalInfo || {
+                calories: 300,
+                protein: 15,
+                carbs: 30,
+                fat: 10,
+                fiber: 5,
+                sugar: 8,
+                sodium: 600,
+                servings: 4
+              }
+            };
+          } catch (error) {
+            console.warn('Failed to generate nutritional info for meal:', meal.strMeal, error);
+            return {
+              ...meal,
+              nutritionalInfo: {
+                calories: 300,
+                protein: 15,
+                carbs: 30,
+                fat: 10,
+                fiber: 5,
+                sugar: 8,
+                sodium: 600,
+                servings: 4
+              }
+            };
+          }
+        })
+      );
+
+      return mealsWithNutrition;
     } catch (e) {
       console.warn('AI generation failed', e);
       return [];
@@ -276,12 +343,22 @@ Return only the JSON object, no additional text.`;
         strInstructions: parsed.strInstructions || originalRecipe.strInstructions,
         
         strMealThumb: originalRecipe.strMealThumb,
-     
+        
         isModified: true,
         modificationDate: new Date().toISOString(),
         originalId: originalRecipe.idMeal,
         modificationRequest: modificationRequest
       } as any;
+
+      
+      try {
+        const nutritionalInfo = await this.analyzeNutritionalInfo({ meal: modifiedMeal });
+        if (nutritionalInfo) {
+          modifiedMeal.nutritionalInfo = nutritionalInfo;
+        }
+      } catch (error) {
+        console.warn('Failed to generate nutritional info for modified meal:', modifiedMeal.strMeal, error);
+      }
 
       return modifiedMeal;
     } catch (e) {
@@ -409,6 +486,16 @@ Return only the JSON object, no additional text.`;
         missingIngredients: missingIngredients
       } as any;
 
+      
+      try {
+        const nutritionalInfo = await this.analyzeNutritionalInfo({ meal: substitutedMeal });
+        if (nutritionalInfo) {
+          substitutedMeal.nutritionalInfo = nutritionalInfo;
+        }
+      } catch (error) {
+        console.warn('Failed to generate nutritional info for substituted meal:', substitutedMeal.strMeal, error);
+      }
+
       return substitutedMeal;
     } catch (e) {
       console.warn('AI ingredient substitution failed', e);
@@ -453,12 +540,20 @@ Recipe Details:
 - Instructions: ${meal.strInstructions}
 
 Please analyze this recipe and calculate the nutritional information per serving. Consider:
-1. The actual ingredients and their quantities
-2. Cooking methods that might affect nutritional values
-3. Standard serving sizes for this type of dish
-4. Realistic portion sizes for the cuisine type
+1. The actual ingredients and their quantities - be precise with measurements
+2. Cooking methods that might affect nutritional values (frying adds fat, boiling may reduce some nutrients)
+3. Standard serving sizes for this type of dish in ${meal.strArea} cuisine
+4. Realistic portion sizes - consider this is likely a main dish, side dish, or appetizer
+5. Oil and cooking fat usage in the preparation
+6. Any marinades, sauces, or seasonings that add calories/nutrients
 
-Provide accurate nutritional analysis based on the specific ingredients listed. If an ingredient quantity is unclear, use reasonable estimates based on typical recipe proportions.
+IMPORTANT: 
+- If quantities are unclear (like "to taste" or "as needed"), use typical amounts for that ingredient in this type of dish
+- Consider the cooking method: stir-frying uses more oil than steaming, deep-frying significantly increases calories
+- Account for all ingredients including oils, butter, sauces, and seasonings
+- Be realistic about serving sizes - this appears to be a ${meal.strCategory.toLowerCase()} dish
+
+Provide accurate nutritional analysis based on the specific ingredients and cooking method. Use your knowledge of food nutrition to estimate values for ingredients without specific quantities.
 
 Return the nutritional information as JSON with the following structure:
 {
@@ -472,7 +567,7 @@ Return the nutritional information as JSON with the following structure:
   "servings": number (estimated number of servings this recipe makes)
 }
 
-Be as accurate as possible based on the ingredients provided. Return only the JSON object, no additional text.`;
+Be as accurate as possible based on the ingredients and cooking method provided. Return only the JSON object, no additional text.`;
 
     const body = {
       contents: [
