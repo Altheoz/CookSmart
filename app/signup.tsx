@@ -2,15 +2,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { auth } from '../FirebaseConfig';
 import { UserService } from '../services/userService';
@@ -30,6 +34,8 @@ const Signup = () => {
   const [passwordInputError, setPasswordInputError] = useState(false);
   const [confirmPasswordInputError, setConfirmPasswordInputError] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const contentWrapperRef = useRef<View>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -40,6 +46,21 @@ const Signup = () => {
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+    
+      setTimeout(() => {
+        
+        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      }, 50);
+    });
+
+    return () => {
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
 
   const showError = (type: 'email' | 'password' | 'confirmPassword', message: string) => {
     if (type === 'email') {
@@ -66,13 +87,25 @@ const Signup = () => {
     }
   };
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  const validateEmail = (emailValue: string) => {
+    const normalizedEmail = emailValue.trim().toLowerCase();
+    const emailRegex = /^[a-z0-9._%+-]+@gmail\.com$/;
+    return emailRegex.test(normalizedEmail);
+  };
+
+  const validatePasswordStrength = (passwordValue: string): { isValid: boolean; message: string } => {
+    if (passwordValue.length < 8) {
+      return { isValid: false, message: 'Password must be at least 8 characters long' };
+    }
+    if (!/[0-9]/.test(passwordValue)) {
+      return { isValid: false, message: 'Password must contain at least one number' };
+    }
+    return { isValid: true, message: '' };
   };
 
   const handleSignup = async () => {
-    
+    const trimmedEmail = email.trim();
+
     setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
@@ -81,20 +114,22 @@ const Signup = () => {
     setConfirmPasswordInputError(false);
 
 
-    if (!email) {
+    if (!trimmedEmail) {
       showError('email', 'Must input email');
       return;
     }
-    if (!validateEmail(email)) {
-      showError('email', 'Please enter a valid email');
+    if (!validateEmail(trimmedEmail)) {
+      showError('email', 'Please enter a Gmail address (example@gmail.com)');
       return;
     }
+    const normalizedEmail = trimmedEmail.toLowerCase();
     if (!password) {
       showError('password', 'Must input password');
       return;
     }
-    if (password.length < 6) {
-      showError('password', 'Password must be at least 6 characters');
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      showError('password', passwordValidation.message);
       return;
     }
     if (!confirmPassword) {
@@ -112,7 +147,7 @@ const Signup = () => {
 
     setIsLoading(true);
     try {
-      const userData = await UserService.createUser(email, password, 'user');
+      const userData = await UserService.createUser(normalizedEmail, password, 'user');
       
       router.replace('/EmailVerification');
     } catch (error: any) {
@@ -132,141 +167,160 @@ const Signup = () => {
   return (
     <SafeAreaView style={[styles.container, { flex: 1 }]}>
       <StatusBar style="dark" />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#333" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.contentWrapper}>
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="restaurant" size={40} color="#fff" />
-          </View>
-        </View>
-
-        <Text style={styles.heading}>Create Account!</Text>
-        <Text style={styles.subheading}>Join us and start cooking amazing meals</Text>
-
-        <View style={styles.inputContainer}>
-          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-          <TextInput
-            style={[
-              styles.emailInput,
-              styles.input,
-              emailInputError && styles.inputError
-            ]}
-            placeholder="Enter your email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-          <View style={[
-            styles.passwordInputWrapper,
-            passwordInputError && styles.passwordInputWrapperError
-          ]}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={isPasswordHidden}
-              autoCapitalize="none"
-              placeholderTextColor="#999"
-            />
-            <TouchableOpacity
-              onPress={() => setIsPasswordHidden(!isPasswordHidden)}
-              style={styles.eyeButton}
-            >
-              <Ionicons
-                name={isPasswordHidden ? 'eye-off' : 'eye'}
-                size={22}
-                color="#6c757d"
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.inputContainer}>
-          {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
-          <View style={[
-            styles.passwordInputWrapper,
-            confirmPasswordInputError && styles.passwordInputWrapperError
-          ]}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Confirm your password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={isConfirmPasswordHidden}
-              autoCapitalize="none"
-              placeholderTextColor="#999"
-            />
-            <TouchableOpacity
-              onPress={() => setIsConfirmPasswordHidden(!isConfirmPasswordHidden)}
-              style={styles.eyeButton}
-            >
-              <Ionicons
-                name={isConfirmPasswordHidden ? 'eye-off' : 'eye'}
-                size={22}
-                color="#6c757d"
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-
-        <View style={styles.termsContainer}>
-          <TouchableOpacity 
-            style={styles.checkboxContainer}
-            onPress={() => setAcceptTerms(!acceptTerms)}
-          >
-            <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
-              {acceptTerms && (
-                <Ionicons name="checkmark" size={16} color="#fff" />
-              )}
-            </View>
-            <View style={styles.termsTextContainer}>
-              <Text style={styles.termsText}>
-                I agree to the{' '}
-                <Text 
-                  style={styles.termsLink}
-                  onPress={() => router.push('/TermsAndConditions')}
-                >
-                  Terms and Conditions
-                </Text>
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.registerButton,
-            isLoading && { opacity: 0.6 },
-            !acceptTerms && styles.registerButtonDisabled,
-          ]}
-          onPress={handleSignup}
-          disabled={isLoading || !acceptTerms}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoiding}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        keyboardVerticalOffset={0}
+        enabled={true}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={true}
         >
-          <Text style={styles.registerButtonText}>
-            {isLoading ? 'Creating Account...' : 'Register'}
-          </Text>
-        </TouchableOpacity>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={28} color="#333" />
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.bottomTextWrapper}>
-          <Text style={styles.bottomText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/login')}>
-            <Text style={styles.loginNowText}>Login Now</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+          <View ref={contentWrapperRef} style={styles.contentWrapper}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoCircle}>
+                <Ionicons name="restaurant" size={40} color="#fff" />
+              </View>
+            </View>
+
+            <Text style={styles.heading}>Create Account!</Text>
+            <Text style={styles.subheading}>Join us and start cooking amazing meals</Text>
+
+            <View style={styles.inputContainer}>
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+              <TextInput
+                style={[
+                  styles.emailInput,
+                  styles.input,
+                  emailInputError && styles.inputError
+                ]}
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholderTextColor="#999"
+                returnKeyType="next"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+              <View style={[
+                styles.passwordInputWrapper,
+                passwordInputError && styles.passwordInputWrapperError
+              ]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={isPasswordHidden}
+                  autoCapitalize="none"
+                  placeholderTextColor="#999"
+                  returnKeyType="next"
+                />
+                <TouchableOpacity
+                  onPress={() => setIsPasswordHidden(!isPasswordHidden)}
+                  style={styles.eyeButton}
+                >
+                  <Ionicons
+                    name={isPasswordHidden ? 'eye-off' : 'eye'}
+                    size={22}
+                    color="#6c757d"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.inputContainer}>
+              {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
+              <View style={[
+                styles.passwordInputWrapper,
+                confirmPasswordInputError && styles.passwordInputWrapperError
+              ]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={isConfirmPasswordHidden}
+                  autoCapitalize="none"
+                  placeholderTextColor="#999"
+                  returnKeyType="done"
+                />
+                <TouchableOpacity
+                  onPress={() => setIsConfirmPasswordHidden(!isConfirmPasswordHidden)}
+                  style={styles.eyeButton}
+                >
+                  <Ionicons
+                    name={isConfirmPasswordHidden ? 'eye-off' : 'eye'}
+                    size={22}
+                    color="#6c757d"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+
+            <View style={styles.termsContainer}>
+              <TouchableOpacity 
+                style={styles.checkboxContainer}
+                onPress={() => setAcceptTerms(!acceptTerms)}
+              >
+                <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+                  {acceptTerms && (
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                  )}
+                </View>
+                <View style={styles.termsTextContainer}>
+                  <Text style={styles.termsText}>
+                    I agree to the{' '}
+                    <Text 
+                      style={styles.termsLink}
+                      onPress={() => router.push('/TermsAndConditions')}
+                    >
+                      Terms and Conditions
+                    </Text>
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.registerButton,
+                isLoading && { opacity: 0.6 },
+                !acceptTerms && styles.registerButtonDisabled,
+              ]}
+              onPress={handleSignup}
+              disabled={isLoading || !acceptTerms}
+            >
+              <Text style={styles.registerButtonText}>
+                {isLoading ? 'Creating Account...' : 'Register'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.bottomTextWrapper}>
+              <Text style={styles.bottomText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/login')}>
+                <Text style={styles.loginNowText}>Login Now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -278,11 +332,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  contentWrapper: {
+  keyboardAvoiding: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 32,
+  },
+  contentWrapper: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    marginTop: '-30%',
+    marginTop: -40,
   },
   logoContainer: {
     alignItems: 'center',

@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Animated,
+  Modal,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -16,10 +17,26 @@ import { auth } from '../FirebaseConfig';
 import { UserService } from '../services/userService';
 import './global.css';
 
+const COOLDOWN_DURATION = 300; 
+
 const EmailVerification = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+ 
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showNotVerifiedModal, setShowNotVerifiedModal] = useState(false);
+  
+ 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -28,6 +45,9 @@ const EmailVerification = () => {
       
         if (user.emailVerified) {
           router.replace('/(tabs)/home');
+        } else {
+          
+          setCooldownSeconds(COOLDOWN_DURATION);
         }
       } else {
      
@@ -38,25 +58,102 @@ const EmailVerification = () => {
     return unsubscribe;
   }, []);
 
+  
+  useEffect(() => {
+    if (cooldownSeconds > 0) {
+      intervalRef.current = setInterval(() => {
+        setCooldownSeconds((prev) => {
+          if (prev <= 1) {
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [cooldownSeconds]);
+
+  
+  useEffect(() => {
+    const isVisible = showSuccessModal || showResendModal || showErrorModal || showNotVerifiedModal;
+    if (isVisible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 50,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showSuccessModal, showResendModal, showErrorModal, showNotVerifiedModal]);
+
   const handleResendVerification = async () => {
+    if (cooldownSeconds > 0) {
+      return;
+    }
+
     setIsResending(true);
     try {
       await UserService.resendEmailVerification();
-      Alert.alert(
-        'Verification Email Sent',
-        'A new verification email has been sent to your email address. Please check your inbox and spam folder.',
-        [{ text: 'OK' }]
-      );
+      setCooldownSeconds(COOLDOWN_DURATION); // Reset to 5-minute cooldown
+      setShowResendModal(true);
     } catch (error: any) {
       console.error('Error resending verification:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to resend verification email. Please try again.',
-        [{ text: 'OK' }]
-      );
+      setErrorMessage(error.message || 'Failed to resend verification email. Please try again.');
+      setShowErrorModal(true);
     } finally {
       setIsResending(false);
     }
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleCheckVerification = async () => {
@@ -65,33 +162,22 @@ const EmailVerification = () => {
       await UserService.refreshUserData();
       const user = auth.currentUser;
       if (user && user.emailVerified) {
-        Alert.alert(
-          'Email Verified!',
-          'Your email has been successfully verified. You can now access all features.',
-          [
-            {
-              text: 'Continue',
-              onPress: () => router.replace('/(tabs)/home')
-            }
-          ]
-        );
+        setShowSuccessModal(true);
       } else {
-        Alert.alert(
-          'Not Verified Yet',
-          'Your email is not verified yet. Please check your email and click the verification link.',
-          [{ text: 'OK' }]
-        );
+        setShowNotVerifiedModal(true);
       }
     } catch (error: any) {
       console.error('Error checking verification:', error);
-      Alert.alert(
-        'Error',
-        'Failed to check verification status. Please try again.',
-        [{ text: 'OK' }]
-      );
+      setErrorMessage('Failed to check verification status. Please try again.');
+      setShowErrorModal(true);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleContinueToHome = () => {
+    setShowSuccessModal(false);
+    router.replace('/(tabs)/home');
   };
 
   const handleSignOut = async () => {
@@ -154,13 +240,18 @@ const EmailVerification = () => {
           <TouchableOpacity
             style={[
               styles.resendButton,
-              isResending && { opacity: 0.6 }
+              (isResending || cooldownSeconds > 0) && { opacity: 0.6 },
+              cooldownSeconds > 0 && styles.resendButtonDisabled
             ]}
             onPress={handleResendVerification}
-            disabled={isResending}
+            disabled={isResending || cooldownSeconds > 0}
           >
             {isResending ? (
               <ActivityIndicator color="#F9761A" size="small" />
+            ) : cooldownSeconds > 0 ? (
+              <Text style={styles.resendButtonText}>
+                Resend in {formatTime(cooldownSeconds)}
+              </Text>
             ) : (
               <Text style={styles.resendButtonText}>Resend Verification Link</Text>
             )}
@@ -173,6 +264,158 @@ const EmailVerification = () => {
           </Text>
         </View>
       </View>
+
+     
+      <Modal visible={showSuccessModal} transparent animationType="none">
+        <Animated.View 
+          style={[
+            styles.modalOverlay,
+            { opacity: fadeAnim }
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.modalContent,
+              {
+                transform: [
+                  { scale: scaleAnim },
+                  { translateY: slideAnim }
+                ],
+              },
+            ]}
+          >
+            <View style={styles.modalIconContainer}>
+              <View style={styles.successIconCircle}>
+                <Ionicons name="checkmark-circle" size={64} color="#10B981" />
+              </View>
+            </View>
+            <Text style={styles.modalTitle}>Email Verified!</Text>
+            <Text style={styles.modalMessage}>
+              Your email has been successfully verified. You can now access all features of CookSmart.
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={handleContinueToHome}
+            >
+              <Text style={styles.modalButtonText}>Continue to Home</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+
+ 
+      <Modal visible={showResendModal} transparent animationType="none">
+        <Animated.View 
+          style={[
+            styles.modalOverlay,
+            { opacity: fadeAnim }
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.modalContent,
+              {
+                transform: [
+                  { scale: scaleAnim },
+                  { translateY: slideAnim }
+                ],
+              },
+            ]}
+          >
+            <View style={styles.modalIconContainer}>
+              <View style={styles.resendIconCircle}>
+                <Ionicons name="mail" size={64} color="#F9761A" />
+              </View>
+            </View>
+            <Text style={styles.modalTitle}>Verification Email Sent!</Text>
+            <Text style={styles.modalMessage}>
+              A new verification email has been sent to your email address. Please check your inbox and spam folder.
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setShowResendModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Got it</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+
+    
+      <Modal visible={showErrorModal} transparent animationType="none">
+        <Animated.View 
+          style={[
+            styles.modalOverlay,
+            { opacity: fadeAnim }
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.modalContent,
+              {
+                transform: [
+                  { scale: scaleAnim },
+                  { translateY: slideAnim }
+                ],
+              },
+            ]}
+          >
+            <View style={styles.modalIconContainer}>
+              <View style={styles.errorIconCircle}>
+                <Ionicons name="close-circle" size={64} color="#EF4444" />
+              </View>
+            </View>
+            <Text style={styles.modalTitle}>Error</Text>
+            <Text style={styles.modalMessage}>
+              {errorMessage}
+            </Text>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonError]}
+              onPress={() => setShowErrorModal(false)}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+
+      
+      <Modal visible={showNotVerifiedModal} transparent animationType="none">
+        <Animated.View 
+          style={[
+            styles.modalOverlay,
+            { opacity: fadeAnim }
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.modalContent,
+              {
+                transform: [
+                  { scale: scaleAnim },
+                  { translateY: slideAnim }
+                ],
+              },
+            ]}
+          >
+            <View style={styles.modalIconContainer}>
+              <View style={styles.warningIconCircle}>
+                <Ionicons name="warning" size={64} color="#F59E0B" />
+              </View>
+            </View>
+            <Text style={styles.modalTitle}>Not Verified Yet</Text>
+            <Text style={styles.modalMessage}>
+              Your email is not verified yet. Please check your email and click the verification link to continue.
+            </Text>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonWarning]}
+              onPress={() => setShowNotVerifiedModal(false)}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -290,6 +533,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  resendButtonDisabled: {
+    borderColor: '#ccc',
+  },
   helpContainer: {
     alignItems: 'center',
   },
@@ -298,5 +544,101 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    width: '100%',
+    maxWidth: 400,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  modalIconContainer: {
+    marginBottom: 24,
+  },
+  successIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#D1FAE5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resendIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  warningIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 12,
+    textAlign: 'center',
+    fontFamily: 'Sansita',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  modalButton: {
+    backgroundColor: '#F9761A',
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#F9761A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalButtonError: {
+    backgroundColor: '#EF4444',
+    shadowColor: '#EF4444',
+  },
+  modalButtonWarning: {
+    backgroundColor: '#F59E0B',
+    shadowColor: '#F59E0B',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });

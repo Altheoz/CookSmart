@@ -8,6 +8,7 @@ import {
     Alert,
     FlatList,
     Image,
+    Modal,
     RefreshControl,
     SafeAreaView,
     ScrollView,
@@ -43,6 +44,9 @@ function HistoryContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'recent'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'rating' | 'time'>('date');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -79,25 +83,20 @@ function HistoryContent() {
   };
 
   const handleClearAllHistory = () => {
-    Alert.alert(
-      'Clear All History',
-      'Are you sure you want to clear all your cooking history? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Clear All', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await clearAllCookingHistory();
-              Alert.alert('Success', 'All cooking history has been cleared.');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to clear history. Please try again.');
-            }
-          }
-        }
-      ]
-    );
+    setShowConfirmModal(true);
+  };
+
+  const confirmClearAll = async () => {
+    try {
+      setIsClearing(true);
+      await clearAllCookingHistory();
+      setShowConfirmModal(false);
+      setShowSuccessModal(true);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to clear history. Please try again.');
+    } finally {
+      setIsClearing(false);
+    }
   };
 
   const filteredHistory = cookingHistory
@@ -247,6 +246,65 @@ function HistoryContent() {
           />
         )}
       </ScrollView>
+
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconCircle}>
+              <Ionicons name="checkmark" size={36} color="#FFFFFF" />
+            </View>
+            <Text style={styles.modalTitle}>History cleared</Text>
+            <Text style={styles.modalSubtitle}>Your cooking journey list is now empty. Keep cooking and it will fill up again!</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setShowSuccessModal(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalButtonText}>Great!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showConfirmModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfirmModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={[styles.modalIconCircle, { backgroundColor: '#F44336' }]}>
+              <Ionicons name="trash" size={32} color="#FFFFFF" />
+            </View>
+            <Text style={styles.modalTitle}>Clear all history?</Text>
+            <Text style={styles.modalSubtitle}>This will remove all your cooking sessions from this account. This action cannot be undone.</Text>
+            <View style={styles.modalActionsRow}>
+              <TouchableOpacity
+                style={styles.modalSecondaryButton}
+                onPress={() => setShowConfirmModal(false)}
+                disabled={isClearing}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalSecondaryButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalDestructiveButton}
+                onPress={confirmClearAll}
+                disabled={isClearing}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalDestructiveButtonText}>{isClearing ? 'Clearing…' : 'Clear All'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -291,6 +349,86 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    elevation: 6,
+  },
+  modalIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#000',
+    marginTop: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  modalButton: {
+    marginTop: 18,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 18,
+  },
+  modalSecondaryButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalSecondaryButtonText: {
+    color: '#333333',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalDestructiveButton: {
+    flex: 1,
+    backgroundColor: '#F44336',
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalDestructiveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   scrollContent: {
     paddingBottom: 40,

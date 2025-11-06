@@ -34,6 +34,11 @@ export class CookingHistoryService {
   private static readonly STATS_KEY = 'cooksmart_cooking_stats';
 
  
+  private static storageKey(baseKey: string): string {
+    const uid = this.getCurrentUid();
+    return `${baseKey}:${uid ?? 'guest'}`;
+  }
+
   private static removeUndefinedDeep<T>(value: T): T {
     if (value === null) return value;
    
@@ -92,7 +97,7 @@ export class CookingHistoryService {
      
       const sanitizedSession = this.removeUndefinedDeep<CookingSession>(session);
       const updatedHistory = [sanitizedSession, ...existingHistory];
-      await AsyncStorage.setItem(this.HISTORY_KEY, JSON.stringify(updatedHistory));
+      await AsyncStorage.setItem(this.storageKey(this.HISTORY_KEY), JSON.stringify(updatedHistory));
 
      
       if (uid) {
@@ -113,7 +118,7 @@ export class CookingHistoryService {
   
   static async getCookingHistory(): Promise<CookingSession[]> {
     try {
-      const stored = await AsyncStorage.getItem(this.HISTORY_KEY);
+      const stored = await AsyncStorage.getItem(this.storageKey(this.HISTORY_KEY));
       if (stored) {
         const history = JSON.parse(stored);
         
@@ -175,7 +180,7 @@ export class CookingHistoryService {
         }
       }
 
-      const stored = await AsyncStorage.getItem(this.STATS_KEY);
+      const stored = await AsyncStorage.getItem(this.storageKey(this.STATS_KEY));
       if (stored) {
         const stats = JSON.parse(stored);
         return {
@@ -227,7 +232,7 @@ export class CookingHistoryService {
       };
 
       
-      await AsyncStorage.setItem(this.STATS_KEY, JSON.stringify(newStats));
+      await AsyncStorage.setItem(this.storageKey(this.STATS_KEY), JSON.stringify(newStats));
 
       if (uid) {
         await setDoc(this.statsDocRef(uid), {
@@ -344,7 +349,7 @@ export class CookingHistoryService {
       
       const history = await this.getCookingHistory();
       const updatedHistory = history.filter(session => session.id !== sessionId);
-      await AsyncStorage.setItem(this.HISTORY_KEY, JSON.stringify(updatedHistory));
+      await AsyncStorage.setItem(this.storageKey(this.HISTORY_KEY), JSON.stringify(updatedHistory));
       
       
       if (uid) {
@@ -372,7 +377,7 @@ export class CookingHistoryService {
       const currentStats = await this.getCookingStats();
       
       
-      await AsyncStorage.removeItem(this.HISTORY_KEY);
+      await AsyncStorage.removeItem(this.storageKey(this.HISTORY_KEY));
       
     
       if (uid) {
@@ -410,7 +415,7 @@ export class CookingHistoryService {
         lastCookingDate: undefined,
         achievements: [],
       };
-      await AsyncStorage.setItem(this.STATS_KEY, JSON.stringify(updatedStats));
+      await AsyncStorage.setItem(this.storageKey(this.STATS_KEY), JSON.stringify(updatedStats));
       
     } catch (error) {
       console.error('Error clearing cooking history:', error);
