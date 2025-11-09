@@ -16,6 +16,7 @@ import {
 
 import CustomDrawerContent from '@/components/CustomDrawerContent';
 import { useRecipeContext } from '@/contexts/RecipeContext';
+import { UserService } from '@/services/userService';
 import DiscoverContent from './discover';
 import FavoriteContent from './favorite';
 import FeaturedContent from './featured';
@@ -130,9 +131,21 @@ export default function HomeScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(getAuth(), (user) => {
+    const unsubscribe = onAuthStateChanged(getAuth(), async (user) => {
       if (user) {
-        setCurrentUser(user);
+        try {
+          
+          const userData = await UserService.getUserData(user.uid);
+          if (userData?.role === 'admin' || userData?.role === 'super_admin') {
+           
+            router.replace('/admin-dashboard');
+            return;
+          }
+          setCurrentUser(user);
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          setCurrentUser(user);
+        }
       } else {
         router.replace('/');
       }

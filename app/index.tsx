@@ -13,13 +13,28 @@ import {
   View,
 } from 'react-native';
 import { auth } from '../FirebaseConfig';
+import { UserService } from '../services/userService';
 
 const Index = () => {
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        router.replace('/(tabs)/home');
+        try {
+          
+          const userData = await UserService.getUserData(user.uid);
+          if (userData?.role === 'admin' || userData?.role === 'super_admin') {
+           
+            router.replace('/admin-dashboard');
+          } else {
+            
+            router.replace('/(tabs)/home');
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+         
+          router.replace('/(tabs)/home');
+        }
       }
     });
 
