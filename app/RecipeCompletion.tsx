@@ -32,11 +32,12 @@ export default function RecipeCompletionScreen() {
 
  
   useEffect(() => {
+    let isMounted = true;
     const saveCookingSession = async () => {
-      if (meal && !sessionSaved) {
+      if (meal && !sessionSaved && isMounted) {
         try {
           const cookingSession: CookingSession = {
-            id: `${meal.idMeal}_${Date.now()}`,
+            id: `${meal.idMeal}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             meal: meal,
             completedAt: new Date(),
             cookingTime: 30,
@@ -55,7 +56,9 @@ export default function RecipeCompletionScreen() {
           };
 
           await addCookingSession(cookingSession);
-          setSessionSaved(true);
+          if (isMounted) {
+            setSessionSaved(true);
+          }
         } catch (error) {
           console.error('Error saving cooking session:', error);
         }
@@ -63,7 +66,11 @@ export default function RecipeCompletionScreen() {
     };
 
     saveCookingSession();
-  }, [meal?.idMeal, sessionSaved, addCookingSession]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [meal?.idMeal, sessionSaved]);
 
   return (
     <SafeAreaView style={styles.container}>

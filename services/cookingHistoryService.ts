@@ -84,31 +84,64 @@ export class CookingHistoryService {
   static async saveCookingSession(session: CookingSession): Promise<void> {
     try {
       const uid = this.getCurrentUid();
+      const sanitizedSession = this.removeUndefinedDeep<CookingSession>(session);
+      
+      
+      if (uid) {
+        try {
+          
+          const firestoreHistory = await this.getCookingHistoryFromFirestore();
+          const existsInFirestore = firestoreHistory.some(s => s.id === sanitizedSession.id);
+          
+          if (existsInFirestore) {
+            console.log('Session already exists in Firestore, skipping save');
+            
+            await AsyncStorage.setItem(this.storageKey(this.HISTORY_KEY), JSON.stringify(firestoreHistory));
+            return;
+          }
+          
+          
+          await setDoc(doc(this.historyCollectionRef(uid), sanitizedSession.id), {
+            ...sanitizedSession,
+            completedAt: sanitizedSession.completedAt,
+          });
+          
+        
+          await this.updateCookingStats(sanitizedSession);
+          
+          
+          const updatedHistory = await this.getCookingHistoryFromFirestore();
+          await AsyncStorage.setItem(this.storageKey(this.HISTORY_KEY), JSON.stringify(updatedHistory));
+          
+          return;
+        } catch (firestoreError) {
+          console.error('Error saving to Firestore, falling back to AsyncStorage:', firestoreError);
+         
+        }
+      }
+      
+      
+      const stored = await AsyncStorage.getItem(this.storageKey(this.HISTORY_KEY));
+      let existingHistory: CookingSession[] = [];
+      
+      if (stored) {
+        const history = JSON.parse(stored);
+        existingHistory = history.map((s: any) => ({
+          ...s,
+          completedAt: new Date(s.completedAt),
+        }));
+      }
       
      
-      const existingHistory = await this.getCookingHistory();
-      const existingSession = existingHistory.find(s => s.id === session.id);
-      
+      const existingSession = existingHistory.find(s => s.id === sanitizedSession.id);
       if (existingSession) {
-        console.log('Session already exists, skipping save');
+        console.log('Session already exists in AsyncStorage, skipping save');
         return;
       }
       
-     
-      const sanitizedSession = this.removeUndefinedDeep<CookingSession>(session);
-      const updatedHistory = [sanitizedSession, ...existingHistory];
+      
+      const updatedHistory = [sanitizedSession, ...existingHistory.filter(s => s.id !== sanitizedSession.id)];
       await AsyncStorage.setItem(this.storageKey(this.HISTORY_KEY), JSON.stringify(updatedHistory));
-
-     
-      if (uid) {
-        await setDoc(doc(this.historyCollectionRef(uid), sanitizedSession.id), {
-          ...sanitizedSession,
-          completedAt: sanitizedSession.completedAt,
-        });
-        
-       
-        await this.updateCookingStats(sanitizedSession);
-      }
     } catch (error) {
       console.error('Error saving cooking session:', error);
       throw error;
@@ -118,14 +151,53 @@ export class CookingHistoryService {
   
   static async getCookingHistory(): Promise<CookingSession[]> {
     try {
+      const uid = this.getCurrentUid();
+      
+      
+      if (uid) {
+        try {
+          const firestoreHistory = await this.getCookingHistoryFromFirestore();
+          
+          
+          const seenIds = new Set<string>();
+          const uniqueHistory = firestoreHistory.filter((session) => {
+            if (seenIds.has(session.id)) {
+              return false;
+            }
+            seenIds.add(session.id);
+            return true;
+          });
+          
+          
+          await AsyncStorage.setItem(this.storageKey(this.HISTORY_KEY), JSON.stringify(uniqueHistory));
+          
+          return uniqueHistory;
+        } catch (firestoreError) {
+          console.log('Firestore not available, falling back to AsyncStorage:', firestoreError);
+          
+        }
+      }
+      
+     
       const stored = await AsyncStorage.getItem(this.storageKey(this.HISTORY_KEY));
       if (stored) {
         const history = JSON.parse(stored);
-        
-        return history.map((session: any) => ({
+        const sessions = history.map((session: any) => ({
           ...session,
           completedAt: new Date(session.completedAt),
         }));
+        
+     
+        const seenIds = new Set<string>();
+        const uniqueSessions = sessions.filter((session: CookingSession) => {
+          if (seenIds.has(session.id)) {
+            return false;
+          }
+          seenIds.add(session.id);
+          return true;
+        });
+        
+        return uniqueSessions;
       }
       return [];
     } catch (error) {

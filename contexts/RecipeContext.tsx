@@ -123,7 +123,16 @@ export const RecipeProvider: React.FC<RecipeProviderProps> = ({ children }) => {
   const loadCookingHistory = async () => {
     try {
       const history = await CookingHistoryService.getCookingHistory();
-      setCookingHistory(history);
+      
+      const seenIds = new Set<string>();
+      const uniqueHistory = history.filter((session) => {
+        if (seenIds.has(session.id)) {
+          return false;
+        }
+        seenIds.add(session.id);
+        return true;
+      });
+      setCookingHistory(uniqueHistory);
     } catch (error) {
       console.error('Error loading cooking history:', error);
     }

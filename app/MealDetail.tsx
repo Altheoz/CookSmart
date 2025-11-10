@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
   Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -40,11 +42,17 @@ export default function MealDetailScreen() {
   const [modifiedMeal, setModifiedMeal] = useState<any>(null);
   const [missingIngredients, setMissingIngredients] = useState<string[]>([]);
   const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
+  const [saveModalState, setSaveModalState] = useState<{ visible: boolean; mode: 'saved' | 'removed' }>({
+    visible: false,
+    mode: 'saved',
+  });
+  const [showRemoveConfirmModal, setShowRemoveConfirmModal] = useState(false);
   const [coreIngredients, setCoreIngredients] = useState<string[]>([]);
   const [nutritionalInfo, setNutritionalInfo] = useState<NutritionalInfo | null>(null);
   const [isLoadingNutrition, setIsLoadingNutrition] = useState(false);
   const [nutritionError, setNutritionError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const successTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   
   const currentMeal = modifiedMeal || meal;
@@ -102,13 +110,79 @@ export default function MealDetailScreen() {
     }
   }, [meal, currentMeal.idMeal, fetchNutritionalInfo]);
 
+  React.useEffect(() => {
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+    };
+  }, []);
+
+  const triggerSaveSuccessModal = React.useCallback((mode: 'saved' | 'removed') => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+    }
+    setSaveModalState({ visible: true, mode });
+    const duration = mode === 'saved' ? 2600 : 2200;
+    successTimerRef.current = setTimeout(() => {
+      setSaveModalState(prev => ({ ...prev, visible: false }));
+      successTimerRef.current = null;
+    }, duration);
+  }, []);
+
+  const handleGoToSaved = React.useCallback(() => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = null;
+    }
+    setSaveModalState(prev => ({ ...prev, visible: false }));
+    router.push('/(tabs)/saved');
+  }, []);
+
+  const handleDismissSaveModal = React.useCallback(() => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = null;
+    }
+    setSaveModalState(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  const handleUndoRemove = React.useCallback(async () => {
+    try {
+      await addToSaved(currentMeal);
+      triggerSaveSuccessModal('saved');
+    } catch (error) {
+      console.error('Error re-saving recipe:', error);
+      Alert.alert('Oops', 'We could not add this recipe back right now. Please try again.');
+    }
+  }, [addToSaved, currentMeal, triggerSaveSuccessModal]);
+
+  const handleConfirmRemoveSaved = React.useCallback(async () => {
+    try {
+      await removeFromSaved(meal.idMeal);
+      setShowRemoveConfirmModal(false);
+      triggerSaveSuccessModal('removed');
+    } catch (error) {
+      console.error('Error removing saved recipe:', error);
+      Alert.alert('Oops', 'We could not remove this recipe right now. Please try again.');
+    }
+  }, [meal.idMeal, removeFromSaved, triggerSaveSuccessModal]);
+
+  const handleCancelRemoveSaved = React.useCallback(() => {
+    setShowRemoveConfirmModal(false);
+  }, []);
+
   const handleToggleSaved = async () => {
     if (isSaved(meal.idMeal)) {
-      await removeFromSaved(meal.idMeal);
-      Alert.alert('Removed', 'Recipe removed from your saved list.');
+      setShowRemoveConfirmModal(true);
     } else {
-      await addToSaved(currentMeal);
-      Alert.alert('Saved', 'Recipe saved to your collection.');
+      try {
+        await addToSaved(currentMeal);
+        triggerSaveSuccessModal('saved');
+      } catch (error) {
+        console.error('Error saving recipe:', error);
+        Alert.alert('Oops', 'We could not save this recipe right now. Please try again.');
+      }
     }
   };
 
@@ -260,6 +334,20 @@ export default function MealDetailScreen() {
   }, [instructions, searchQuery]);
 
   
+  const { visible: showSaveSuccessModal, mode: saveModalMode } = saveModalState;
+  const isSaveModalInSavedState = saveModalMode === 'saved';
+  const modalRecipeName = currentMeal?.strMeal;
+  const saveModalTitle = isSaveModalInSavedState ? 'Recipe Saved!' : 'Removed from Saved';
+  const saveModalMessage = isSaveModalInSavedState
+    ? modalRecipeName
+      ? `${modalRecipeName} is now in your Saved list and ready for offline cooking whenever you are.`
+      : 'This recipe is now in your Saved list and ready for offline cooking whenever you are.'
+    : modalRecipeName
+      ? `${modalRecipeName} has been removed from your Saved list. You can add it back anytime.`
+      : 'This recipe has been removed from your Saved list. You can add it back anytime.';
+  const saveModalIconName = isSaveModalInSavedState ? 'checkmark' : 'trash-outline';
+  const saveModalIconStyle = isSaveModalInSavedState ? styles.successIconWrapperSaved : styles.successIconWrapperRemoved;
+
   if (isLoading || !meal || !meal.idMeal) {
     return (
       <SafeAreaView style={styles.container}>
@@ -519,6 +607,63 @@ export default function MealDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showSaveSuccessModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleDismissSaveModal}
+      >
+        <View style={styles.successModalOverlay}>
+          <View style={styles.successModalCard}>
+            <View style={[styles.successIconWrapper, saveModalIconStyle]}>
+              <Ionicons name={saveModalIconName} size={32} color="#fff" />
+            </View>
+            <Text style={styles.successTitle}>{saveModalTitle}</Text>
+            <Text style={styles.successMessage}>{saveModalMessage}</Text>
+            <View style={styles.successActions}>
+              {isSaveModalInSavedState ? (
+                <>
+                  
+                </>
+              ) : (
+                <>
+                
+                </>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showRemoveConfirmModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelRemoveSaved}
+      >
+        <View style={styles.successModalOverlay}>
+          <View style={styles.confirmModalCard}>
+            <View style={styles.confirmIconWrapper}>
+              <Ionicons name="bookmark-outline" size={28} color="#FF6B35" />
+            </View>
+            <Text style={styles.confirmTitle}>Remove from Saved?</Text>
+            <Text style={styles.confirmMessage}>
+              {modalRecipeName
+                ? `We'll remove ${modalRecipeName} from your Saved recipes. You can add it back any time.`
+                : 'We will remove this recipe from your Saved list. You can add it back any time.'}
+            </Text>
+            <View style={styles.confirmActions}>
+              <TouchableOpacity style={styles.confirmSecondaryButton} onPress={handleCancelRemoveSaved}>
+                <Text style={styles.confirmSecondaryButtonText}>Keep Saved</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmPrimaryButton} onPress={handleConfirmRemoveSaved}>
+                <Text style={styles.confirmPrimaryButtonText}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {showSubstitutionModal && (
         <View style={styles.modalOverlay}>
@@ -1111,6 +1256,168 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 16,
+  },
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  successModalCard: {
+    width: '90%',
+    maxWidth: 360,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  successIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  successIconWrapperSaved: {
+    backgroundColor: '#22c55e',
+  },
+  successIconWrapperRemoved: {
+    backgroundColor: '#ef4444',
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  successMessage: {
+    fontSize: 14,
+    color: '#4b5563',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  successActions: {
+    width: '100%',
+  },
+  successPrimaryButton: {
+    backgroundColor: '#FF6B35',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  successPrimaryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  successSecondaryButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  successSecondaryButtonText: {
+    color: '#FF6B35',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  undoButton: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#ef4444',
+  },
+  undoButtonText: {
+    color: '#ef4444',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  confirmModalCard: {
+    width: '90%',
+    maxWidth: 360,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  confirmIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFF2EA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  confirmMessage: {
+    fontSize: 14,
+    color: '#4b5563',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  confirmSecondaryButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+  },
+  confirmSecondaryButtonText: {
+    color: '#1f2937',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  confirmPrimaryButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#FF6B35',
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  confirmPrimaryButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
   ingredientsList: {
     maxHeight: 300,

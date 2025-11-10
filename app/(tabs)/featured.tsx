@@ -10,6 +10,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  RefreshControl,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -40,6 +41,7 @@ function FeaturedContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Meal[]>([]);
   const [searching, setSearching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadFeaturedMeals();
@@ -82,6 +84,13 @@ function FeaturedContent() {
 
   const handleCategoryPress = (category: Category) => {
     navigation.navigate('CategoryMeals', { category });
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setSearchQuery(''); 
+    await Promise.all([loadFeaturedMeals(), loadCategories()]);
+    setRefreshing(false);
   };
 
   const renderMealCard = ({ item }: { item: Meal }) => (
@@ -147,6 +156,16 @@ function FeaturedContent() {
         renderItem={renderMealCard}
         contentContainerStyle={styles.mealsList}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#FF6B35']}
+            tintColor="#FF6B35"
+            title="Pull to refresh"
+            titleColor="#666"
+          />
+        }
         ListHeaderComponent={
           <View>
             <View style={styles.headerContainer}>
