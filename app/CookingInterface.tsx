@@ -63,6 +63,7 @@ export default function CookingInterfaceScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const countdownAnnouncedRef = useRef(false);
 
   const DEFAULT_STEP_TIMER_SECONDS = 60;
 
@@ -414,14 +415,16 @@ export default function CookingInterfaceScreen() {
     const resumeKeywords = ['resume', 'play', 'start', 'go'];
     const timerStartKeywords = ['start timer', 'timer start', 'begin timer', 'start the timer'];
     const timerStopKeywords = ['stop timer', 'timer stop', 'end timer', 'stop the timer'];
+    const timerResetKeywords = ['reset timer', 'timer reset', 'reset', 'restart timer'];
     const repeatKeywords = ['repeat', 'say again', 'read again', 'replay'];
     const completeKeywords = ['mark complete', 'complete', 'done', 'finished', 'mark as done'];
     const voiceOffKeywords = ['voice off', 'stop listening', 'disable voice', 'turn off voice'];
     const voiceOnKeywords = ['voice on', 'start listening', 'enable voice', 'turn on voice'];
+    const stillGoingKeywords = ['still', 'steel', 'still cooking', 'still working'];
     
     
     if (lowerCommand.includes('continue')) {
-      if (!isPlaying && timerActive) {
+      if (!isPlaying && timeRemaining > 0) {
         togglePause();
         speakConfirmation("Okay, resuming");
       } else {
@@ -438,6 +441,8 @@ export default function CookingInterfaceScreen() {
     } else if (timerStopKeywords.some(keyword => lowerCommand.includes(keyword))) {
       stopTimer();
       speakConfirmation("Okay, stopping timer");
+    } else if (timerResetKeywords.some(keyword => lowerCommand.includes(keyword))) {
+      resetTimer();
     } else if (nextKeywords.some(keyword => lowerCommand.includes(keyword))) {
       goToNextStep();
       speakConfirmation("Okay, going to next step");
@@ -455,13 +460,15 @@ export default function CookingInterfaceScreen() {
       speakConfirmation("Okay, repeating instruction");
     } else if (completeKeywords.some(keyword => lowerCommand.includes(keyword))) {
       markStepComplete();
-      speakConfirmation("Okay, marking step as complete");
+      speakConfirmation("");
     } else if (voiceOffKeywords.some(keyword => lowerCommand.includes(keyword))) {
       setIsVoiceEnabled(false);
       speakConfirmation("Okay, voice commands disabled");
     } else if (voiceOnKeywords.some(keyword => lowerCommand.includes(keyword))) {
       setIsVoiceEnabled(true);
       speakConfirmation("Okay, voice commands enabled");
+    } else if (stillGoingKeywords.some(keyword => lowerCommand.includes(keyword))) {
+      speakConfirmation("Okay");
     } else {
       console.log('No command recognized for:', lowerCommand);
       speakConfirmation("Sorry, I didn't understand that command");
@@ -488,8 +495,10 @@ export default function CookingInterfaceScreen() {
         }),
       ]).start();
       
-       setCurrentStep(currentStep + 1);
-       stopTimer();
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      stopTimer();
+      setTimeRemaining(cookingSteps[nextStep]?.timer ?? 0);
       
       Animated.timing(progressAnim, {
         toValue: ((currentStep + 2) / cookingSteps.length) * 100,
@@ -526,8 +535,10 @@ export default function CookingInterfaceScreen() {
         return newSet;
       });
       
-       setCurrentStep(currentStep - 1);
-       stopTimer();
+      const previousStep = currentStep - 1;
+      setCurrentStep(previousStep);
+      stopTimer();
+      setTimeRemaining(cookingSteps[previousStep]?.timer ?? 0);
       
       Animated.timing(progressAnim, {
         toValue: (currentStep / cookingSteps.length) * 100,
@@ -590,28 +601,25 @@ export default function CookingInterfaceScreen() {
   };
 
   const togglePause = () => {
-    if (!timerActive && timeRemaining <= 0) {
-     
-      startTimer();
+    if (isPlaying) {
+      stopTimer();
       return;
     }
-    setIsPlaying(!isPlaying);
-    if (timerActive) {
-      if (isPlaying) {
-        stopTimer();
-      } else {
-        startTimer();
-      }
-    }
+    startTimer();
   };
 
   const startTimer = () => {
     const currentStepData = cookingSteps[currentStep];
-    const duration = currentStepData.timer || (timeRemaining > 0 ? timeRemaining : DEFAULT_STEP_TIMER_SECONDS);
+    const stepDuration = currentStepData?.timer || DEFAULT_STEP_TIMER_SECONDS;
+    const hasExistingTime = timeRemaining > 0;
+    const duration = hasExistingTime ? timeRemaining : stepDuration;
 
-    setTimeRemaining(duration);
+    if (!hasExistingTime) {
+      setTimeRemaining(duration);
+    }
     setTimerActive(true);
     setIsPlaying(true);
+    countdownAnnouncedRef.current = false; 
 
     const pulse = Animated.loop(
       Animated.sequence([
@@ -634,6 +642,16 @@ export default function CookingInterfaceScreen() {
     }
     timerRef.current = setInterval(() => {
       setTimeRemaining(prev => {
+        if (prev === 15 && !countdownAnnouncedRef.current) {
+          countdownAnnouncedRef.current = true;
+          speakConfirmation("Timer is almost done");
+        }
+        
+      
+        if (prev < 11 && prev > 1 && countdownAnnouncedRef.current) {
+          speakConfirmation(prev.toString());
+        }
+        
         if (prev <= 1) {
           Vibration.vibrate([0, 500, 200, 500]);
           stopTimer();
@@ -654,13 +672,16 @@ export default function CookingInterfaceScreen() {
     setTimerActive(false);
     setIsPlaying(false);
     pulseAnim.setValue(1);
+    countdownAnnouncedRef.current = false; 
   };
 
   const resetTimer = () => {
     stopTimer();
     const currentStepData = cookingSteps[currentStep];
-    const duration = currentStepData.timer || DEFAULT_STEP_TIMER_SECONDS;
+    const duration = currentStepData?.timer || DEFAULT_STEP_TIMER_SECONDS;
     setTimeRemaining(duration);
+    countdownAnnouncedRef.current = false; 
+    speakConfirmation("Timer reset, ready to continue");
   };
 
   const speakInstruction = async (instruction: string) => {
@@ -697,7 +718,7 @@ export default function CookingInterfaceScreen() {
       if (permission) {
         Alert.alert(
           'Voice Commands Ready!', 
-          'You can now use voice commands like "next step", "previous step", "pause", "start timer", "repeat", and "mark complete".',
+          'You can now use voice commands like "next step", "previous step", "pause", "start timer", "reset timer", "repeat", and "mark complete".',
           [
             {
               text: 'OK',
@@ -714,6 +735,21 @@ export default function CookingInterfaceScreen() {
   useEffect(() => {
     progressAnim.setValue(((currentStep + 1) / cookingSteps.length) * 100);
   }, [cookingSteps.length]);
+
+  useEffect(() => {
+    const stepData = cookingSteps[currentStep];
+    const nextValue = stepData?.timer ?? 0;
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setTimerActive(false);
+    setIsPlaying(false);
+    pulseAnim.setValue(1);
+
+    setTimeRemaining(prev => (prev === nextValue ? prev : nextValue));
+  }, [currentStep, cookingSteps]);
 
   useEffect(() => {
     if (voiceActivated && cookingSteps[currentStep] && !readSteps.has(currentStep)) {
@@ -1018,7 +1054,7 @@ export default function CookingInterfaceScreen() {
            </View>
            
            <Text style={styles.voiceHint}>
-             Voice Commands: "next step", "previous step", "pause", "start timer", "repeat", "mark complete"
+             Voice Commands: "next step", "previous step", "pause", "start timer", "reset timer", "repeat", "mark complete"
            </Text>
          </View>
       </ScrollView>
